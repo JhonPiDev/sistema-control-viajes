@@ -52,12 +52,21 @@ y del frontend en **Vercel** o **Netlify**, cumpliendo el requisito de
 > **Nota sobre bases de datos:** el plan gratuito de Render solo incluye
 > una base de datos por Blueprint. Para simplificar el despliegue de la
 > prueba técnica, `trips-service` y `operations-service` comparten el
-> mismo servidor PostgreSQL (cada uno con sus propias tablas). En
-> `docker-compose.yml` (entorno local) sí quedan completamente
-> separados en `trips_db` y `operations_db`, que es el patrón correcto
-> de "database-per-service". Para producción real, crea una segunda base
-> de datos en Render y actualiza el `DATABASE_URL` de
-> `operations-service`.
+> mismo servidor PostgreSQL, pero cada uno usa su **propio schema de
+> Postgres** dentro de esa base de datos (`public` para trips-service,
+> `operations` para operations-service — ver `docker-entrypoint.sh` de
+> cada servicio). Esto es necesario porque cada servicio corre
+> `prisma db push --accept-data-loss` con un `schema.prisma` distinto; si
+> ambos apuntaran al mismo schema de Postgres, el `db push` de uno podía
+> interpretar las tablas del otro como drift no reconocido y resetearlas
+> (bug real que se dio en el primer despliegue: login fallaba con "Error
+> del microservicio" porque `db push` de operations-service borraba las
+> tablas de trips-service). En `docker-compose.yml` (entorno local) los
+> dos servicios ya tienen bases de datos completamente separadas
+> (`trips_db` y `operations_db`), que es el patrón correcto de
+> "database-per-service"; para producción real, lo ideal es crear una
+> segunda base de datos en Render y actualizar el `DATABASE_URL` de
+> `operations-service` en vez de compartir servidor.
 
 ## Opción B — Despliegue manual (paso a paso)
 
