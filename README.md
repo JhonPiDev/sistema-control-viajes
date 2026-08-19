@@ -9,6 +9,24 @@ en contenedores Docker.
 
 ---
 
+## 🔗 Despliegue en vivo
+
+| Recurso | URL |
+|---|---|
+| Frontend (Admin + Conductor) | https://sistema-control-viajes.vercel.app |
+| API Gateway (REST) | https://api-gateway-y35g.onrender.com/api |
+| Documentación Swagger | https://api-gateway-y35g.onrender.com/api/docs |
+| Healthcheck | https://api-gateway-y35g.onrender.com/api/health |
+
+Credenciales de prueba en la sección [4](#4-credenciales-de-prueba-pre-cargadas-por-el-seed) más abajo.
+
+> Nota: el backend está en el plan gratuito de Render, así que los
+> servicios pueden "dormirse" tras ~15 min sin tráfico; la primera
+> petición después de estar inactivos puede tardar unos segundos extra en
+> responder mientras el contenedor despierta.
+
+---
+
 ## 1. Arquitectura
 
 ```
