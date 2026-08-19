@@ -15,19 +15,39 @@ y del frontend en **Vercel** o **Netlify**, cumpliendo el requisito de
 
 1. Sube este repositorio a GitHub (o GitLab).
 2. Entra a https://dashboard.render.com → **New** → **Blueprint**.
-3. Selecciona el repositorio. Render detecta automáticamente
-   `deploy/render.yaml` (si no lo detecta, indícalo manualmente en
-   "Blueprint file path").
+3. Selecciona el repositorio. **Importante**: en el campo "Blueprint
+   Path" escribe `deploy/render.yaml` a mano — el archivo no está en la
+   raíz del repo, y Render no lo encuentra solo si dejas ese campo vacío.
 4. Render creará automáticamente:
    * Una base de datos PostgreSQL (`viajes-postgres`).
-   * `trips-service` y `operations-service` como **Private Services**
-     (solo accesibles internamente, igual que en docker-compose).
-   * `api-gateway` como **Web Service** público, con `JWT_SECRET`
-     autogenerado.
+   * `trips-service`, `operations-service` y `api-gateway`, los 3 como
+     **Web Service** (para poder usar el plan gratuito — ver nota abajo).
+   * Una clave `INTERNAL_API_KEY` autogenerada y compartida entre los 3
+     servicios backend (vía `envVarGroups` en el blueprint).
 5. Espera a que los 3 servicios terminen de construirse (5-10 min la
    primera vez).
-6. Copia la URL pública de `api-gateway`
-   (algo como `https://api-gateway-xxxx.onrender.com`).
+6. Copia la URL pública de cada servicio desde el dashboard (con el
+   patrón `https://<nombre-del-servicio>.onrender.com`, salvo que el
+   nombre ya esté tomado por otra cuenta en Render, en cuyo caso te
+   pondrá un sufijo distinto).
+7. **Verifica las URLs entre servicios**: `deploy/render.yaml` trae un
+   valor por defecto (`https://trips-service.onrender.com`, etc.) para
+   `TRIPS_SERVICE_URL` (en `operations-service` y `api-gateway`) y
+   `OPERATIONS_SERVICE_URL` (en `api-gateway`). Si el nombre real que te
+   asignó Render es distinto, entra a cada servicio → **Environment** →
+   corrige esa variable con la URL real → Render redepliega solo.
+
+> **Por qué los 3 son "Web Service" y no "Private Service":** el plan
+> gratuito de Render no permite crear Private Services (esa opción
+> requiere el plan Pro, $25/mes), y tampoco permite que un Web Service
+> gratuito reciba tráfico por la red privada interna — solo puede
+> enviarlo. Por eso `trips-service` y `operations-service` se comunican
+> entre sí (y con `api-gateway`) por su URL pública normal, protegidos
+> con la clave compartida `INTERNAL_API_KEY`: cualquier request a sus
+> endpoints internos que no traiga el header `x-internal-key` correcto
+> se rechaza con 401. Localmente (`docker-compose.yml`) esto no aplica —
+> ahí siguen aislados dentro de la red interna de Docker de todas
+> formas, la clave es una capa extra de seguridad también en local.
 
 > **Nota sobre bases de datos:** el plan gratuito de Render solo incluye
 > una base de datos por Blueprint. Para simplificar el despliegue de la
@@ -43,19 +63,18 @@ y del frontend en **Vercel** o **Netlify**, cumpliendo el requisito de
 
 1. **Base de datos**: Render → New → PostgreSQL → crea `viajes-postgres`.
    Copia la "Internal Connection String".
-2. **trips-service**: New → Private Service → conecta el repo →
+2. **trips-service**: New → Web Service → conecta el repo →
    Root Directory: `backend/trips-service` → Environment: Docker →
-   variable `DATABASE_URL` = connection string anterior (con
-   `?schema=trips`, opcional).
+   variables `DATABASE_URL` (connection string anterior) e
+   `INTERNAL_API_KEY` (inventa un valor largo y aleatorio).
 3. **operations-service**: igual que el anterior, Root Directory:
-   `backend/operations-service`, más las variables
-   `TRIPS_SERVICE_HOST` / `TRIPS_SERVICE_PORT` apuntando al hostname
-   interno de `trips-service` (Render lo expone como
-   `<nombre-servicio>` dentro de la misma red privada).
+   `backend/operations-service`, más `INTERNAL_API_KEY` (el mismo valor
+   exacto) y `TRIPS_SERVICE_URL` apuntando a la URL pública de
+   `trips-service`.
 4. **api-gateway**: New → Web Service → Root Directory:
-   `backend/api-gateway` → variables `JWT_SECRET`, `TRIPS_SERVICE_HOST`,
-   `TRIPS_SERVICE_PORT`, `OPERATIONS_SERVICE_HOST`,
-   `OPERATIONS_SERVICE_PORT`, `CORS_ORIGIN` (URL del frontend).
+   `backend/api-gateway` → variables `JWT_SECRET`, `INTERNAL_API_KEY`
+   (mismo valor otra vez), `TRIPS_SERVICE_URL`, `OPERATIONS_SERVICE_URL`,
+   `CORS_ORIGIN` (URL del frontend).
 
 ---
 

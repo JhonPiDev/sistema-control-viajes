@@ -1,38 +1,31 @@
 import { NestFactory } from '@nestjs/core';
-import { Transport, MicroserviceOptions } from '@nestjs/microservices';
 import { ValidationPipe } from '@nestjs/common';
 import { AppModule } from './app.module';
-import { RpcHttpExceptionFilter } from './common/filters/rpc-http-exception.filter';
 
+/**
+ * trips-service se levanta como una API HTTP normal (ya no como
+ * microservicio TCP). El motivo: el plan gratuito de Render no permite
+ * "Private Services" (que sí soportarían TCP aislado en red interna), así
+ * que este servicio se despliega como Web Service normal, protegido con
+ * una clave interna compartida (ver common/guards/internal-auth.guard.ts)
+ * en vez de aislamiento de red. api-gateway y operations-service le hablan
+ * por HTTP usando TRIPS_SERVICE_URL.
+ */
 async function bootstrap() {
-  const app = await NestFactory.createMicroservice<MicroserviceOptions>(
-    AppModule,
-    {
-      transport: Transport.TCP,
-      options: {
-        host: '0.0.0.0',
-        port: parseInt(process.env.TCP_PORT || '3001', 10),
-      },
-    },
-  );
+  const app = await NestFactory.create(AppModule);
 
-  // Validación estricta de DTOs también a nivel de microservicio
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,
       forbidNonWhitelisted: true,
       transform: true,
+      transformOptions: { enableImplicitConversion: true },
     }),
   );
 
-  // Preserva el código HTTP real (400/404/409/...) y el detalle de
-  // validación al propagar errores hacia el API Gateway por TCP.
-  app.useGlobalFilters(new RpcHttpExceptionFilter());
-
-  await app.listen();
+  const port = process.env.PORT || process.env.TCP_PORT || 3001;
+  await app.listen(port, '0.0.0.0');
   // eslint-disable-next-line no-console
-  console.log(
-    `🚌 trips-service (TCP) escuchando en puerto ${process.env.TCP_PORT || 3001}`,
-  );
+  console.log(`🚌 trips-service (HTTP interno) escuchando en puerto ${port}`);
 }
 bootstrap();

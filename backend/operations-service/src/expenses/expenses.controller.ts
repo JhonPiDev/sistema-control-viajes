@@ -1,24 +1,25 @@
-import { Controller } from '@nestjs/common';
-import { MessagePattern, Payload } from '@nestjs/microservices';
+import { Body, Controller, Get, Param, Post, UseGuards } from '@nestjs/common';
+import { InternalAuthGuard } from '../common/guards/internal-auth.guard';
 import { ExpensesService } from './expenses.service';
 import { CreateExpenseDto } from '../common/dto/create-expense.dto';
 
-@Controller()
+@UseGuards(InternalAuthGuard)
+@Controller('expenses')
 export class ExpensesController {
   constructor(private readonly expensesService: ExpensesService) {}
 
-  @MessagePattern('expense.create')
-  create(@Payload() dto: CreateExpenseDto) {
+  @Post()
+  create(@Body() dto: CreateExpenseDto) {
     return this.expensesService.create(dto);
   }
 
-  @MessagePattern('expense.findByTrip')
-  findByTrip(@Payload() data: { tripId: string }) {
-    return this.expensesService.findByTrip(data.tripId);
+  @Get('trip/:tripId')
+  findByTrip(@Param('tripId') tripId: string) {
+    return this.expensesService.findByTrip(tripId);
   }
 
-  @MessagePattern('expense.totalByTrip')
-  totalByTrip(@Payload() data: { tripId: string }) {
-    return this.expensesService.totalByTrip(data.tripId);
+  @Get('trip/:tripId/total')
+  totalByTrip(@Param('tripId') tripId: string) {
+    return this.expensesService.totalByTrip(tripId);
   }
 }

@@ -1,37 +1,27 @@
 import { NestFactory } from '@nestjs/core';
-import { Transport, MicroserviceOptions } from '@nestjs/microservices';
 import { ValidationPipe } from '@nestjs/common';
 import { AppModule } from './app.module';
-import { RpcHttpExceptionFilter } from './common/filters/rpc-http-exception.filter';
 
+/**
+ * Igual que trips-service: se levanta como API HTTP normal (Web Service en
+ * Render, no Private Service) protegida con INTERNAL_API_KEY. Ver
+ * trips-service/src/main.ts para la explicación completa del porqué.
+ */
 async function bootstrap() {
-  const app = await NestFactory.createMicroservice<MicroserviceOptions>(
-    AppModule,
-    {
-      transport: Transport.TCP,
-      options: {
-        host: '0.0.0.0',
-        port: parseInt(process.env.TCP_PORT || '3002', 10),
-      },
-    },
-  );
+  const app = await NestFactory.create(AppModule);
 
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,
       forbidNonWhitelisted: true,
       transform: true,
+      transformOptions: { enableImplicitConversion: true },
     }),
   );
 
-  // Preserva el código HTTP real (400/404/409/...) y el detalle de
-  // validación al propagar errores hacia el API Gateway por TCP.
-  app.useGlobalFilters(new RpcHttpExceptionFilter());
-
-  await app.listen();
+  const port = process.env.PORT || process.env.TCP_PORT || 3002;
+  await app.listen(port, '0.0.0.0');
   // eslint-disable-next-line no-console
-  console.log(
-    `🧾 operations-service (TCP) escuchando en puerto ${process.env.TCP_PORT || 3002}`,
-  );
+  console.log(`🧾 operations-service (HTTP interno) escuchando en puerto ${port}`);
 }
 bootstrap();

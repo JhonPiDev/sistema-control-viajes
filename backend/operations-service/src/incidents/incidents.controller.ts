@@ -1,19 +1,20 @@
-import { Controller } from '@nestjs/common';
-import { MessagePattern, Payload } from '@nestjs/microservices';
+import { Body, Controller, Get, Param, Post, UseGuards } from '@nestjs/common';
+import { InternalAuthGuard } from '../common/guards/internal-auth.guard';
 import { IncidentsService } from './incidents.service';
 import { CreateIncidentDto } from '../common/dto/create-incident.dto';
 
-@Controller()
+@UseGuards(InternalAuthGuard)
+@Controller('incidents')
 export class IncidentsController {
   constructor(private readonly incidentsService: IncidentsService) {}
 
-  @MessagePattern('incident.create')
-  create(@Payload() dto: CreateIncidentDto) {
+  @Post()
+  create(@Body() dto: CreateIncidentDto) {
     return this.incidentsService.create(dto);
   }
 
-  @MessagePattern('incident.findByTrip')
-  findByTrip(@Payload() data: { tripId: string }) {
-    return this.incidentsService.findByTrip(data.tripId);
+  @Get('trip/:tripId')
+  findByTrip(@Param('tripId') tripId: string) {
+    return this.incidentsService.findByTrip(tripId);
   }
 }

@@ -1,50 +1,69 @@
-import { ClientProxy } from '@nestjs/microservices';
-import { catchError, firstValueFrom, timeout, TimeoutError } from 'rxjs';
 import { HttpException, HttpStatus } from '@nestjs/common';
 
 /**
- * Helper para enviar mensajes TCP a los microservicios y traducir
- * cualquier error (o timeout) en una HttpException legible, que luego
- * formatea el AllExceptionsFilter.
+ * Llama a un endpoint interno de trips-service u operations-service por
+ * HTTP (antes esto era TCP vía @nestjs/microservices; ver el historial de
+ * commits para el porqué del cambio: el plan gratis de Render no permite
+ * tráfico de red privada entrante en Web Services, así que los
+ * microservicios ahora exponen una API HTTP normal protegida con
+ * INTERNAL_API_KEY en vez de aislamiento de red).
  *
- * Importante: los microservicios envían `{ statusCode, error, message }`
- * gracias a RpcHttpExceptionFilter (ver src/common/filters en cada
- * microservicio). NUNCA hay que confiar en un `err.status` genérico sin
- * validar que sea numérico:
- * Nest serializa por defecto los errores no-RpcException como
- * `{ status: 'error', message }`, y pasarle ese string 'error' a
- * HttpException/response.status() revienta el proceso con
- * ERR_HTTP_INVALID_STATUS_CODE.
+ * Traduce cualquier error de red o HTTP en una HttpException legible que
+ * luego formatea el AllExceptionsFilter. Como trips-service y
+ * operations-service ahora son apps Nest HTTP normales, sus errores YA
+ * vienen como JSON bien formado ({statusCode, error, message}) sin
+ * necesidad de ningún filtro especial del lado del microservicio.
  */
-export async function sendRpc<T>(
-  client: ClientProxy,
-  pattern: string,
-  payload: unknown,
+export async function callService<T>(
+  baseUrl: string,
+  method: 'GET' | 'POST' | 'PATCH',
+  path: string,
+  body?: unknown,
 ): Promise<T> {
-  return firstValueFrom(
-    client.send<T>(pattern, payload).pipe(
-      timeout(8000),
-      catchError((err) => {
-        if (err instanceof TimeoutError) {
-          throw new HttpException(
-            'El microservicio no respondió a tiempo',
-            HttpStatus.GATEWAY_TIMEOUT,
-          );
-        }
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 8000);
 
-        const statusCode =
-          typeof err?.statusCode === 'number'
-            ? err.statusCode
-            : typeof err?.status === 'number'
-              ? err.status
-              : HttpStatus.BAD_GATEWAY;
-        const message =
-          err?.message ??
-          err?.response?.message ??
-          'Error de comunicación con el microservicio';
+  let response: Response;
+  try {
+    response = await fetch(`${baseUrl}${path}`, {
+      method,
+      headers: {
+        'Content-Type': 'application/json',
+        'x-internal-key': process.env.INTERNAL_API_KEY || '',
+      },
+      body: body !== undefined ? JSON.stringify(body) : undefined,
+      signal: controller.signal,
+    });
+  } catch (err: any) {
+    clearTimeout(timeoutId);
+    if (err?.name === 'AbortError') {
+      throw new HttpException(
+        'El microservicio no respondió a tiempo',
+        HttpStatus.GATEWAY_TIMEOUT,
+      );
+    }
+    throw new HttpException(
+      'Error de comunicación con el microservicio',
+      HttpStatus.BAD_GATEWAY,
+    );
+  }
+  clearTimeout(timeoutId);
 
-        throw new HttpException(message, statusCode);
-      }),
-    ),
-  );
+  // Respuestas sin body (204, o error que no devolvió JSON)
+  let payload: any = null;
+  const text = await response.text();
+  if (text) {
+    try {
+      payload = JSON.parse(text);
+    } catch {
+      payload = text;
+    }
+  }
+
+  if (!response.ok) {
+    const message = payload?.message ?? 'Error del microservicio';
+    throw new HttpException(message, response.status);
+  }
+
+  return payload as T;
 }

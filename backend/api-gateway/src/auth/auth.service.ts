@@ -1,20 +1,18 @@
-import { Inject, Injectable } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
-import { ClientProxy } from '@nestjs/microservices';
-import { sendRpc } from '../common/rpc.helper';
+import { callService } from '../common/rpc.helper';
+import { TRIPS_SERVICE_URL } from '../common/service-urls';
 import { LoginDto } from './dto/login.dto';
 
 @Injectable()
 export class AuthService {
-  constructor(
-    @Inject('TRIPS_SERVICE') private readonly tripsClient: ClientProxy,
-    private readonly jwtService: JwtService,
-  ) {}
+  constructor(private readonly jwtService: JwtService) {}
 
   async login(dto: LoginDto) {
-    const user = await sendRpc<any>(
-      this.tripsClient,
-      'user.validateCredentials',
+    const user = await callService<any>(
+      TRIPS_SERVICE_URL,
+      'POST',
+      '/users/validate-credentials',
       dto,
     );
 
@@ -32,6 +30,6 @@ export class AuthService {
   }
 
   async me(userId: string) {
-    return sendRpc<any>(this.tripsClient, 'user.findById', { id: userId });
+    return callService<any>(TRIPS_SERVICE_URL, 'GET', `/users/${userId}`);
   }
 }

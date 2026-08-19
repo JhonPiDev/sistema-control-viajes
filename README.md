@@ -25,14 +25,14 @@ en contenedores Docker.
                        │  (NestJS · REST · JWT  │
                        │  RBAC · Swagger)       │
                        └─────┬─────────────┬────┘
-                    TCP      │             │      TCP
-                 (microservicios internos, no expuestos)
+                   HTTP      │             │      HTTP
+              (API interna, protegida con clave compartida)
                              ▼             ▼
               ┌───────────────────┐  ┌───────────────────────┐
               │   trips-service    │  │  operations-service    │
               │  Usuarios/Auth     │◄─┤  Gastos y Novedades    │
               │  Viajes            │  │  (valida estado del    │
-              │  Pasajeros         │  │   viaje vía TCP antes  │
+              │  Pasajeros         │  │   viaje vía HTTP antes │
               │  Firma digital     │  │   de escribir)         │
               └─────────┬──────────┘  └───────────┬────────────┘
                         │                          │
@@ -50,13 +50,20 @@ en contenedores Docker.
   reporte de cierre de viaje (`GET /trips/:id/report`).
 * **trips-service** y **operations-service** son dos microservicios NestJS
   independientes, cada uno con su propia base de datos lógica en
-  PostgreSQL y comunicados entre sí por **TCP** (`@nestjs/microservices`).
-  La regla de negocio *"no se pueden reportar gastos de un viaje que no
-  ha iniciado"* se resuelve con `operations-service` consultando en vivo
-  el estado del viaje a `trips-service` antes de escribir en su propia
-  base de datos.
-* Ninguno de los dos microservicios es accesible directamente desde
-  internet: solo el API Gateway expone puertos públicos.
+  PostgreSQL y comunicados entre sí por **HTTP**, protegidos con una
+  clave interna compartida (`INTERNAL_API_KEY`) que valida que la llamada
+  venga realmente de otro servicio del sistema y no de un tercero. La
+  regla de negocio *"no se pueden reportar gastos de un viaje que no ha
+  iniciado"* se resuelve con `operations-service` consultando en vivo el
+  estado del viaje a `trips-service` antes de escribir en su propia base
+  de datos.
+* En `docker-compose.yml` (entorno local) los tres servicios backend
+  viven en la misma red interna de Docker, así que ni `trips-service` ni
+  `operations-service` quedan expuestos fuera del stack; solo el API
+  Gateway publica un puerto. En un despliegue en la nube en el plan
+  gratuito de un proveedor (ver sección de despliegue), esa separación de
+  red no siempre está disponible, por eso la clave compartida es la
+  segunda capa de protección independientemente del entorno.
 
 ---
 
@@ -64,7 +71,7 @@ en contenedores Docker.
 
 | Capa | Tecnología |
 |---|---|
-| Backend | NestJS 10, TypeScript, arquitectura de microservicios (TCP) |
+| Backend | NestJS 10, TypeScript, arquitectura de microservicios (HTTP interno) |
 | ORM / BD | Prisma + PostgreSQL 16 |
 | Auth | JWT + Passport, Guards de roles (RBAC) |
 | Frontend | Ionic 8 + Angular 18 (standalone components), Signals |
@@ -175,13 +182,17 @@ que el flujo completo del conductor se pueda probar de inmediato.
   `forbidNonWhitelisted: true`) tanto en el Gateway como en cada
   microservicio.
 * **Manejo centralizado de errores** vía `AllExceptionsFilter`, que
-  normaliza tanto `HttpException` como errores RPC propagados desde los
-  microservicios en una respuesta consistente
+  normaliza tanto `HttpException` propias como errores propagados desde
+  los microservicios en una respuesta consistente
   `{ statusCode, error, message, timestamp, path }`.
 * **Paginación** en el listado de viajes (`page`, `limit`, `status`).
 * **Lógica transaccional entre servicios**: `operations-service` no
-  persiste un gasto/novedad sin antes confirmar por TCP que el viaje
+  persiste un gasto/novedad sin antes confirmar por HTTP que el viaje
   está `IN_PROGRESS`.
+* **Autenticación interna entre microservicios** (`INTERNAL_API_KEY`):
+  todos los endpoints de `trips-service` y `operations-service` exigen un
+  header `x-internal-key` válido, así que solo el Gateway (y entre ellos)
+  pueden invocarlos.
 * **Rate limiting** básico (`@nestjs/throttler`) en el Gateway.
 * **Swagger** documentando todos los endpoints REST con JWT Bearer.
 * **Theming real**: tokens CSS propios (`--app-color-*`, `--app-space-*`,

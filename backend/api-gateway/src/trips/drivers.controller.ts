@@ -1,10 +1,10 @@
-import { Body, Controller, Get, Inject, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Post, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
-import { ClientProxy } from '@nestjs/microservices';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../common/guards/roles.guard';
 import { Roles } from '../common/decorators/roles.decorator';
-import { sendRpc } from '../common/rpc.helper';
+import { callService } from '../common/rpc.helper';
+import { TRIPS_SERVICE_URL } from '../common/service-urls';
 import { slugify } from '../common/slugify';
 import { CreateDriverDto } from './dto/create-driver.dto';
 
@@ -13,12 +13,10 @@ import { CreateDriverDto } from './dto/create-driver.dto';
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Controller('drivers')
 export class DriversController {
-  constructor(@Inject('TRIPS_SERVICE') private readonly tripsClient: ClientProxy) {}
-
   @Get()
   @Roles('ADMIN')
   findAll() {
-    return sendRpc(this.tripsClient, 'user.findAllDrivers', {});
+    return callService(TRIPS_SERVICE_URL, 'GET', '/users/drivers');
   }
 
   /**
@@ -36,7 +34,7 @@ export class DriversController {
     const email = `${slug}@gmail.com`;
     const password = `driver${slug}`;
 
-    const driver = await sendRpc<any>(this.tripsClient, 'user.create', {
+    const driver = await callService<any>(TRIPS_SERVICE_URL, 'POST', '/users', {
       name: dto.name,
       email,
       password,

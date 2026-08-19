@@ -1,11 +1,11 @@
-import { Body, Controller, Get, Inject, Param, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Param, Post, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
-import { ClientProxy } from '@nestjs/microservices';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../common/guards/roles.guard';
 import { Roles } from '../common/decorators/roles.decorator';
 import { CurrentUser, CurrentUserPayload } from '../common/decorators/current-user.decorator';
-import { sendRpc } from '../common/rpc.helper';
+import { callService } from '../common/rpc.helper';
+import { OPERATIONS_SERVICE_URL } from '../common/service-urls';
 import { CreateIncidentDto } from './dto/create-incident.dto';
 
 @ApiTags('incidents')
@@ -13,10 +13,6 @@ import { CreateIncidentDto } from './dto/create-incident.dto';
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Controller('trips/:tripId/incidents')
 export class IncidentsController {
-  constructor(
-    @Inject('OPERATIONS_SERVICE') private readonly operationsClient: ClientProxy,
-  ) {}
-
   @Post()
   @Roles('DRIVER')
   create(
@@ -24,7 +20,7 @@ export class IncidentsController {
     @Body() dto: CreateIncidentDto,
     @CurrentUser() user: CurrentUserPayload,
   ) {
-    return sendRpc(this.operationsClient, 'incident.create', {
+    return callService(OPERATIONS_SERVICE_URL, 'POST', '/incidents', {
       tripId,
       ...dto,
       createdById: user.id,
@@ -34,6 +30,6 @@ export class IncidentsController {
   @Get()
   @Roles('ADMIN', 'DRIVER')
   findByTrip(@Param('tripId') tripId: string) {
-    return sendRpc(this.operationsClient, 'incident.findByTrip', { tripId });
+    return callService(OPERATIONS_SERVICE_URL, 'GET', `/incidents/trip/${tripId}`);
   }
 }

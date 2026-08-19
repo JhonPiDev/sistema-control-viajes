@@ -1,21 +1,16 @@
-import { Controller, Get, Inject, Param, UseGuards } from '@nestjs/common';
+import { Controller, Get, Param, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
-import { ClientProxy } from '@nestjs/microservices';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../common/guards/roles.guard';
 import { Roles } from '../common/decorators/roles.decorator';
-import { sendRpc } from '../common/rpc.helper';
+import { callService } from '../common/rpc.helper';
+import { TRIPS_SERVICE_URL, OPERATIONS_SERVICE_URL } from '../common/service-urls';
 
 @ApiTags('reports')
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Controller('trips/:tripId/report')
 export class ReportsController {
-  constructor(
-    @Inject('TRIPS_SERVICE') private readonly tripsClient: ClientProxy,
-    @Inject('OPERATIONS_SERVICE') private readonly operationsClient: ClientProxy,
-  ) {}
-
   /**
    * Reporte resumen de cierre de viaje. Agrega datos de AMBOS microservicios:
    *  - trips-service: pasajeros transportados / viaje
@@ -27,9 +22,9 @@ export class ReportsController {
   @Roles('ADMIN', 'DRIVER')
   async getReport(@Param('tripId') tripId: string) {
     const [summary, expenses, incidents] = await Promise.all([
-      sendRpc<any>(this.tripsClient, 'trip.getSummary', { id: tripId }),
-      sendRpc<any>(this.operationsClient, 'expense.totalByTrip', { tripId }),
-      sendRpc<any>(this.operationsClient, 'incident.findByTrip', { tripId }),
+      callService<any>(TRIPS_SERVICE_URL, 'GET', `/trips/${tripId}/summary`),
+      callService<any>(OPERATIONS_SERVICE_URL, 'GET', `/expenses/trip/${tripId}/total`),
+      callService<any>(OPERATIONS_SERVICE_URL, 'GET', `/incidents/trip/${tripId}`),
     ]);
 
     return {

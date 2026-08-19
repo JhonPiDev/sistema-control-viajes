@@ -3,14 +3,34 @@
 # ============================================================
 # Cómo usar:
 #   1. Sube este repo a GitHub.
-#   2. En Render: New > Blueprint > selecciona el repo (Render detecta
-#      este archivo automáticamente porque se llama render.yaml).
-#   3. Render creará: 1 base de datos Postgres + 3 servicios backend.
-#   4. trips-service y operations-service son "Private Services" (pserv):
-#      solo accesibles dentro de la red interna de Render vía TCP,
-#      igual que en docker-compose. api-gateway es el único servicio
-#      público (type: web) que expone la API REST.
+#   2. En Render: New > Blueprint > selecciona el repo, y en "Blueprint
+#      Path" indica "deploy/render.yaml" (no está en la raíz del repo).
+#   3. Render creará: 1 base de datos Postgres + 3 servicios backend, los
+#      3 como "Web Service" para poder usar el plan gratuito.
+#   4. IMPORTANTE - comunicación entre microservicios: el plan gratuito
+#      de Render NO permite que un Web Service reciba tráfico por la red
+#      privada (solo puede enviarlo), así que trips-service y
+#      operations-service se llaman entre sí por su URL PÚBLICA. Por eso
+#      quedan protegidos con una clave compartida (INTERNAL_API_KEY, ver
+#      envVarGroups abajo) en vez de aislamiento de red: cualquier
+#      request a sus endpoints que no traiga esa clave se rechaza.
+#   5. Tras el primer deploy, verifica en el dashboard de Render la URL
+#      pública real de trips-service y operations-service (normalmente
+#      https://<nombre-del-servicio>.onrender.com, salvo que ese nombre ya
+#      esté tomado por otra cuenta, en cuyo caso Render le agrega un
+#      sufijo). Si difiere de los valores por defecto de abajo, actualiza
+#      TRIPS_SERVICE_URL (en operations-service y api-gateway) y
+#      OPERATIONS_SERVICE_URL (en api-gateway) con la URL real — eso
+#      dispara un redeploy automático del servicio afectado.
 # ============================================================
+
+envVarGroups:
+  - name: internal-shared
+    envVars:
+      # Mismo valor generado una sola vez y compartido por los 3 servicios
+      # backend, para autenticar las llamadas HTTP internas entre ellos.
+      - key: INTERNAL_API_KEY
+        generateValue: true
 
 databases:
   - name: viajes-postgres
@@ -19,29 +39,31 @@ databases:
     user: viajes_admin
 
 services:
-  # ---------------- trips-service (privado, TCP) ----------------
-  - type: pserv
+  # ---------------- trips-service (Web Service, API interna) ----------------
+  - type: web
     name: trips-service
     runtime: docker
     plan: free
     dockerfilePath: ./backend/trips-service/Dockerfile
     dockerContext: ./backend/trips-service
+    healthCheckPath: /health
     envVars:
+      - fromGroup: internal-shared
       - key: DATABASE_URL
         fromDatabase:
           name: viajes-postgres
           property: connectionString
-      - key: TCP_PORT
-        value: 3001
 
-  # ---------------- operations-service (privado, TCP) ----------------
-  - type: pserv
+  # ---------------- operations-service (Web Service, API interna) ----------------
+  - type: web
     name: operations-service
     runtime: docker
     plan: free
     dockerfilePath: ./backend/operations-service/Dockerfile
     dockerContext: ./backend/operations-service
+    healthCheckPath: /health
     envVars:
+      - fromGroup: internal-shared
       # NOTA: al usar una base de datos separada real (recomendado en
       # producción), crea una segunda BD "viajes-postgres-operations" en
       # Render y apunta este DATABASE_URL a esa. Para simplificar el
@@ -51,17 +73,10 @@ services:
         fromDatabase:
           name: viajes-postgres
           property: connectionString
-      - key: TCP_PORT
-        value: 3002
-      - key: TRIPS_SERVICE_HOST
-        fromService:
-          type: pserv
-          name: trips-service
-          property: host
-      - key: TRIPS_SERVICE_PORT
-        value: 3001
+      - key: TRIPS_SERVICE_URL
+        value: https://trips-service.onrender.com # verifica/ajusta tras el primer deploy
 
-  # ---------------- api-gateway (público, HTTP) ----------------
+  # ---------------- api-gateway (público, único con documentación Swagger) ----------------
   - type: web
     name: api-gateway
     runtime: docker
@@ -70,25 +85,14 @@ services:
     dockerContext: ./backend/api-gateway
     healthCheckPath: /api/health
     envVars:
-      - key: PORT
-        value: 3000
+      - fromGroup: internal-shared
       - key: JWT_SECRET
         generateValue: true
       - key: JWT_EXPIRES_IN
         value: 8h
       - key: CORS_ORIGIN
         value: "*" # Reemplazar por la URL real del frontend en Vercel/Netlify
-      - key: TRIPS_SERVICE_HOST
-        fromService:
-          type: pserv
-          name: trips-service
-          property: host
-      - key: TRIPS_SERVICE_PORT
-        value: 3001
-      - key: OPERATIONS_SERVICE_HOST
-        fromService:
-          type: pserv
-          name: operations-service
-          property: host
-      - key: OPERATIONS_SERVICE_PORT
-        value: 3002
+      - key: TRIPS_SERVICE_URL
+        value: https://trips-service.onrender.com # verifica/ajusta tras el primer deploy
+      - key: OPERATIONS_SERVICE_URL
+        value: https://operations-service.onrender.com # verifica/ajusta tras el primer deploy

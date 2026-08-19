@@ -4,11 +4,9 @@ import { PassportModule } from '@nestjs/passport';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
 import { JwtStrategy } from './jwt.strategy';
-import { AppClientsModule } from '../clients/clients.module';
 
 @Module({
   imports: [
-    AppClientsModule,
     PassportModule,
     JwtModule.registerAsync({
       useFactory: () => ({

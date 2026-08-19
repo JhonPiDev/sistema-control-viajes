@@ -1,20 +1,11 @@
-import {
-  Body,
-  Controller,
-  Get,
-  Param,
-  Post,
-  Query,
-  UseGuards,
-} from '@nestjs/common';
+import { Body, Controller, Get, Param, Post, Query, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
-import { ClientProxy } from '@nestjs/microservices';
-import { Inject } from '@nestjs/common';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../common/guards/roles.guard';
 import { Roles } from '../common/decorators/roles.decorator';
 import { CurrentUser, CurrentUserPayload } from '../common/decorators/current-user.decorator';
-import { sendRpc } from '../common/rpc.helper';
+import { callService } from '../common/rpc.helper';
+import { TRIPS_SERVICE_URL } from '../common/service-urls';
 import { CreateTripDto } from './dto/create-trip.dto';
 import { SignatureDto } from './dto/signature.dto';
 import { PaginationDto } from '../common/dto/pagination.dto';
@@ -24,12 +15,10 @@ import { PaginationDto } from '../common/dto/pagination.dto';
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Controller('trips')
 export class TripsController {
-  constructor(@Inject('TRIPS_SERVICE') private readonly tripsClient: ClientProxy) {}
-
   @Post()
   @Roles('ADMIN')
   create(@Body() dto: CreateTripDto, @CurrentUser() user: CurrentUserPayload) {
-    return sendRpc(this.tripsClient, 'trip.create', {
+    return callService(TRIPS_SERVICE_URL, 'POST', '/trips', {
       ...dto,
       createdById: user.id,
     });
@@ -41,22 +30,26 @@ export class TripsController {
     @Query() pagination: PaginationDto,
     @CurrentUser() user: CurrentUserPayload,
   ) {
-    // Un conductor solo ve sus propios viajes; el admin ve todos
     const driverId = user.role === 'DRIVER' ? user.id : undefined;
-    return sendRpc(this.tripsClient, 'trip.findAll', { pagination, driverId });
+    const params = new URLSearchParams({
+      page: String(pagination.page),
+      limit: String(pagination.limit),
+    });
+    if (pagination.status) params.set('status', pagination.status);
+    if (driverId) params.set('driverId', driverId);
+    return callService(TRIPS_SERVICE_URL, 'GET', `/trips?${params.toString()}`);
   }
 
   @Get(':id')
   @Roles('ADMIN', 'DRIVER')
   findOne(@Param('id') id: string) {
-    return sendRpc(this.tripsClient, 'trip.findOne', { id });
+    return callService(TRIPS_SERVICE_URL, 'GET', `/trips/${id}`);
   }
 
   @Post(':id/signature')
   @Roles('DRIVER')
   saveSignature(@Param('id') id: string, @Body() dto: SignatureDto) {
-    return sendRpc(this.tripsClient, 'trip.saveSignature', {
-      id,
+    return callService(TRIPS_SERVICE_URL, 'POST', `/trips/${id}/signature`, {
       signatureData: dto.signatureData,
     });
   }
@@ -64,12 +57,12 @@ export class TripsController {
   @Post(':id/start')
   @Roles('DRIVER')
   start(@Param('id') id: string) {
-    return sendRpc(this.tripsClient, 'trip.start', { id });
+    return callService(TRIPS_SERVICE_URL, 'POST', `/trips/${id}/start`);
   }
 
   @Post(':id/finish')
   @Roles('DRIVER')
   finish(@Param('id') id: string) {
-    return sendRpc(this.tripsClient, 'trip.finish', { id });
+    return callService(TRIPS_SERVICE_URL, 'POST', `/trips/${id}/finish`);
   }
 }
