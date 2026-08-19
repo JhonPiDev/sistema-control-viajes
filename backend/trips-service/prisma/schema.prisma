@@ -1,0 +1,86 @@
+// Prisma schema - trips-service
+// Contiene: Usuarios (Admin/Conductor), Viajes y Pasajeros
+
+generator client {
+  provider      = "prisma-client-js"
+  // "native" cubre tu máquina/WSL para desarrollo local sin Docker;
+  // "linux-musl-openssl-3.0.x" es el motor que corre dentro del
+  // contenedor node:20-alpine (Alpine usa musl + OpenSSL 3.x).
+  binaryTargets = ["native", "linux-musl-openssl-3.0.x"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  DRIVER
+}
+
+enum TripStatus {
+  PENDING // creado, aún no inicia
+  IN_PROGRESS // en ruta
+  FINISHED // cerrado
+}
+
+enum BoardingStatus {
+  PENDING
+  BOARDED
+  ABSENT
+}
+
+model User {
+  id           String   @id @default(uuid())
+  name         String
+  email        String   @unique
+  passwordHash String
+  role         Role
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  tripsAsDriver Trip[] @relation("DriverTrips")
+  tripsCreated  Trip[] @relation("CreatedTrips")
+
+  @@map("users")
+}
+
+model Trip {
+  id             String     @id @default(uuid())
+  name           String // ej: "Bogotá - Medellín 18/08"
+  origin         String
+  destination    String
+  status         TripStatus @default(PENDING)
+  signatureData  String? // imagen de firma en base64 (data URL)
+  signedAt       DateTime?
+  startedAt      DateTime?
+  finishedAt     DateTime?
+  driverId       String
+  driver         User       @relation("DriverTrips", fields: [driverId], references: [id])
+  createdById    String
+  createdBy      User       @relation("CreatedTrips", fields: [createdById], references: [id])
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
+
+  passengers Passenger[]
+
+  @@index([status])
+  @@index([driverId])
+  @@map("trips")
+}
+
+model Passenger {
+  id             String         @id @default(uuid())
+  tripId         String
+  trip           Trip           @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  name           String
+  document       String
+  boardingStatus BoardingStatus @default(PENDING)
+  checkedAt      DateTime?
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  @@index([tripId])
+  @@map("passengers")
+}

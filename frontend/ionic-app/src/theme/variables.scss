@@ -1,0 +1,175 @@
+/*
+ * ============================================================
+ * DESIGN TOKENS - Sistema de Control de Viajes
+ * ============================================================
+ * Sistema propio de variables (no se usan los estilos por
+ * defecto de Ionic). Define tokens semánticos que luego se
+ * mapean a las variables --ion-color-* que Ionic consume
+ * internamente, más un set de tokens propios (--app-*) para
+ * espaciado, tipografía, sombras y radios usados en toda la app.
+ *
+ * Soporta 3 modos:
+ *  1. Claro   (:root)
+ *  2. Oscuro  (html.theme-dark)
+ *  3. Personalizado (html.theme-custom, con --app-color-primary-custom
+ *     inyectado dinámicamente por ThemeService según lo que elija el usuario)
+ * ============================================================
+ */
+
+:root {
+  // ---- Paleta base (modo claro) — Indigo / Violeta ----
+  --app-color-primary: #4F46E5;
+  --app-color-primary-rgb: 79, 70, 229;
+  --app-color-primary-contrast: #ffffff;
+  --app-color-primary-shade: #4338CA;
+  --app-color-primary-tint: #6366F1;
+
+  --app-color-secondary: #059669;
+  --app-color-secondary-rgb: 5, 150, 105;
+  --app-color-secondary-contrast: #ffffff;
+
+  --app-color-success: #16A34A;
+  --app-color-warning: #F59E0B;
+  --app-color-danger: #EF4444;
+  --app-color-info: #0891B2;
+
+  --app-color-background: #F5F6FB;
+  --app-color-surface: #FFFFFF;
+  --app-color-surface-alt: #EEF0FA;
+  --app-color-surface-raised: #FFFFFF;
+  --app-color-text: #12142B;
+  --app-color-text-muted: #666B85;
+  --app-color-border: #E5E7F2;
+
+  // Pareja de colores para fondos con degradado (héroes, tarjetas destacadas)
+  --app-gradient-start: #4F46E5;
+  --app-gradient-end: #7C3AED;
+  --app-gradient: linear-gradient(135deg, var(--app-gradient-start) 0%, var(--app-gradient-end) 100%);
+
+  // ---- Tokens de espaciado ----
+  --app-space-xs: 4px;
+  --app-space-sm: 8px;
+  --app-space-md: 16px;
+  --app-space-lg: 24px;
+  --app-space-xl: 32px;
+  --app-space-2xl: 48px;
+
+  // ---- Tokens de forma ----
+  --app-radius-sm: 8px;
+  --app-radius-md: 14px;
+  --app-radius-lg: 22px;
+  --app-radius-full: 999px;
+
+  // ---- Tokens de elevación (sombras) ----
+  --app-shadow-sm: 0 1px 2px rgba(18, 20, 43, 0.06), 0 1px 1px rgba(18, 20, 43, 0.04);
+  --app-shadow-md: 0 8px 24px rgba(18, 20, 43, 0.08), 0 2px 6px rgba(18, 20, 43, 0.05);
+  --app-shadow-lg: 0 20px 45px rgba(18, 20, 43, 0.14), 0 6px 14px rgba(18, 20, 43, 0.06);
+  --app-shadow-primary: 0 10px 24px rgba(var(--app-color-primary-rgb), 0.28);
+
+  // ---- Transiciones ----
+  --app-transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
+  --app-transition-base: 240ms cubic-bezier(0.4, 0, 0.2, 1);
+
+  // ---- Tipografía ----
+  --app-font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --app-font-family-heading: 'Plus Jakarta Sans', var(--app-font-family);
+
+  // ================= Mapeo a variables de Ionic =================
+  --ion-color-primary: var(--app-color-primary);
+  --ion-color-primary-rgb: var(--app-color-primary-rgb);
+  --ion-color-primary-contrast: var(--app-color-primary-contrast);
+  --ion-color-primary-contrast-rgb: 255, 255, 255;
+  --ion-color-primary-shade: var(--app-color-primary-shade);
+  --ion-color-primary-tint: var(--app-color-primary-tint);
+
+  --ion-color-secondary: var(--app-color-secondary);
+  --ion-color-secondary-rgb: var(--app-color-secondary-rgb);
+  --ion-color-secondary-contrast: var(--app-color-secondary-contrast);
+
+  --ion-color-success: var(--app-color-success);
+  --ion-color-warning: var(--app-color-warning);
+  --ion-color-danger: var(--app-color-danger);
+
+  --ion-background-color: var(--app-color-background);
+  --ion-text-color: var(--app-color-text);
+  --ion-toolbar-background: var(--app-color-surface);
+  --ion-item-background: var(--app-color-surface);
+  --ion-border-color: var(--app-color-border);
+  --ion-font-family: var(--app-font-family);
+}
+
+/* ================= MODO OSCURO ================= */
+html.theme-dark {
+  --app-color-background: #0A0C16;
+  --app-color-surface: #151827;
+  --app-color-surface-alt: #1C2032;
+  --app-color-surface-raised: #1A1E30;
+  --app-color-text: #F1F2F8;
+  --app-color-text-muted: #9CA1BC;
+  --app-color-border: #292E45;
+
+  --app-color-primary: #818CF8;
+  --app-color-primary-rgb: 129, 140, 248;
+  --app-color-primary-shade: #6366F1;
+  --app-color-primary-tint: #A5B4FC;
+  --app-color-primary-contrast: #0C0E1C;
+
+  --app-color-secondary: #34D399;
+  --app-color-secondary-rgb: 52, 211, 153;
+  --app-color-secondary-contrast: #0C0E1C;
+
+  --app-gradient-start: #4338CA;
+  --app-gradient-end: #6D28D9;
+
+  --app-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.35);
+  --app-shadow-md: 0 10px 26px rgba(0, 0, 0, 0.45);
+  --app-shadow-lg: 0 24px 50px rgba(0, 0, 0, 0.55);
+  --app-shadow-primary: 0 10px 26px rgba(129, 140, 248, 0.35);
+
+  --ion-color-primary: var(--app-color-primary);
+  --ion-color-primary-rgb: var(--app-color-primary-rgb);
+  --ion-color-primary-contrast: var(--app-color-primary-contrast);
+  --ion-color-primary-shade: var(--app-color-primary-shade);
+  --ion-color-primary-tint: var(--app-color-primary-tint);
+
+  --ion-color-secondary: var(--app-color-secondary);
+  --ion-color-secondary-rgb: var(--app-color-secondary-rgb);
+
+  --ion-background-color: var(--app-color-background);
+  --ion-text-color: var(--app-color-text);
+  --ion-toolbar-background: var(--app-color-surface);
+  --ion-item-background: var(--app-color-surface);
+  --ion-border-color: var(--app-color-border);
+
+  color-scheme: dark;
+}
+
+/* ================= TEMA PERSONALIZADO =================
+   El usuario elige un color primario desde el selector de
+   Ajustes; ThemeService inyecta --app-color-primary-custom
+   (y derivados) sobre <html>. El resto de la paleta hereda
+   del modo claro u oscuro que esté activo en ese momento. */
+html.theme-custom {
+  --app-color-primary: var(--app-color-primary-custom, #4F46E5);
+  --app-color-primary-shade: var(--app-color-primary-custom-shade, #4338CA);
+  --app-color-primary-tint: var(--app-color-primary-custom-tint, #6366F1);
+  --app-gradient-start: var(--app-color-primary-custom, #4F46E5);
+  --app-gradient-end: var(--app-color-primary-custom-tint, #6366F1);
+
+  --ion-color-primary: var(--app-color-primary);
+  --ion-color-primary-shade: var(--app-color-primary-shade);
+  --ion-color-primary-tint: var(--app-color-primary-tint);
+  --app-shadow-primary: 0 10px 24px rgba(var(--app-color-primary-rgb), 0.28);
+}
+
+body {
+  background: var(--app-color-background);
+  color: var(--app-color-text);
+  font-family: var(--app-font-family);
+  -webkit-font-smoothing: antialiased;
+}
+
+h1, h2, h3, h4, ion-card-title, ion-title {
+  font-family: var(--app-font-family-heading);
+  letter-spacing: -0.01em;
+}

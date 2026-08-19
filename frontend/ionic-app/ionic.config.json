@@ -1,0 +1,7 @@
+{
+  "name": "sistema-control-viajes",
+  "integrations": {
+    "capacitor": {}
+  },
+  "type": "angular"
+}

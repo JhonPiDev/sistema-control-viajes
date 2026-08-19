@@ -1,0 +1,13 @@
+node_modules/
+dist/
+build/
+www/
+.angular/
+*.log
+.env
+.DS_Store
+coverage/
+.vscode/
+android/
+ios/
+.idea/

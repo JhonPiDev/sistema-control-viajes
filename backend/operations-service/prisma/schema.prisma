@@ -1,0 +1,53 @@
+// Prisma schema - operations-service
+// Contiene: Gastos y Novedades reportados en ruta.
+// No guarda datos de Viajes/Pasajeros: ese es el dominio de trips-service.
+// tripId es una referencia lógica (no FK física) validada vía comunicación TCP.
+
+generator client {
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "linux-musl-openssl-3.0.x"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum ExpenseType {
+  FUEL // combustible extra
+  TOLL // peajes no previstos
+  REPAIR // reparaciones / desvare
+  OTHER
+}
+
+enum IncidentType {
+  DELAY // retraso
+  PASSENGER_ISSUE // problema con pasajeros
+  DETOUR // desvío
+  OTHER
+}
+
+model Expense {
+  id        String      @id @default(uuid())
+  tripId    String
+  type      ExpenseType
+  amount    Decimal     @db.Decimal(12, 2)
+  concept   String
+  createdById String
+  createdAt DateTime    @default(now())
+
+  @@index([tripId])
+  @@map("expenses")
+}
+
+model Incident {
+  id          String       @id @default(uuid())
+  tripId      String
+  type        IncidentType
+  description String
+  createdById String
+  createdAt   DateTime     @default(now())
+
+  @@index([tripId])
+  @@map("incidents")
+}

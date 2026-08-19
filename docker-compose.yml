@@ -1,0 +1,98 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: viajes-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./deploy/init-db.sql:/docker-entrypoint-initdb.d/init-db.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - viajes-net
+
+  trips-service:
+    build:
+      context: ./backend/trips-service
+    container_name: viajes-trips-service
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: ${DATABASE_URL_TRIPS}
+      TCP_PORT: ${TRIPS_SERVICE_PORT}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - viajes-net
+
+  operations-service:
+    build:
+      context: ./backend/operations-service
+    container_name: viajes-operations-service
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: ${DATABASE_URL_OPERATIONS}
+      TCP_PORT: ${OPERATIONS_SERVICE_PORT}
+      TRIPS_SERVICE_HOST: trips-service
+      TRIPS_SERVICE_PORT: ${TRIPS_SERVICE_PORT}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      trips-service:
+        condition: service_started
+    networks:
+      - viajes-net
+
+  api-gateway:
+    build:
+      context: ./backend/api-gateway
+    container_name: viajes-api-gateway
+    restart: unless-stopped
+    environment:
+      PORT: ${GATEWAY_PORT}
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN}
+      CORS_ORIGIN: ${CORS_ORIGIN}
+      TRIPS_SERVICE_HOST: trips-service
+      TRIPS_SERVICE_PORT: ${TRIPS_SERVICE_PORT}
+      OPERATIONS_SERVICE_HOST: operations-service
+      OPERATIONS_SERVICE_PORT: ${OPERATIONS_SERVICE_PORT}
+    ports:
+      - "${GATEWAY_PORT}:${GATEWAY_PORT}"
+    depends_on:
+      - trips-service
+      - operations-service
+    networks:
+      - viajes-net
+
+  frontend:
+    build:
+      context: ./frontend/ionic-app
+    container_name: viajes-frontend
+    restart: unless-stopped
+    environment:
+      # Se inyecta en tiempo de arranque del contenedor (no de build) en
+      # assets/config.json vía docker-entrypoint.sh, así que el mismo
+      # build de la imagen sirve para cualquier entorno.
+      API_URL: ${API_URL}
+    ports:
+      - "8100:80"
+    depends_on:
+      - api-gateway
+    networks:
+      - viajes-net
+
+networks:
+  viajes-net:
+    driver: bridge
+
+volumes:
+  postgres_data:

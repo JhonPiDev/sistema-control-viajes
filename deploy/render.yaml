@@ -1,0 +1,94 @@
+# ============================================================
+# Render Blueprint - Sistema de Control de Viajes (backend + BD)
+# ============================================================
+# Cómo usar:
+#   1. Sube este repo a GitHub.
+#   2. En Render: New > Blueprint > selecciona el repo (Render detecta
+#      este archivo automáticamente porque se llama render.yaml).
+#   3. Render creará: 1 base de datos Postgres + 3 servicios backend.
+#   4. trips-service y operations-service son "Private Services" (pserv):
+#      solo accesibles dentro de la red interna de Render vía TCP,
+#      igual que en docker-compose. api-gateway es el único servicio
+#      público (type: web) que expone la API REST.
+# ============================================================
+
+databases:
+  - name: viajes-postgres
+    plan: free
+    databaseName: trips_db
+    user: viajes_admin
+
+services:
+  # ---------------- trips-service (privado, TCP) ----------------
+  - type: pserv
+    name: trips-service
+    runtime: docker
+    plan: free
+    dockerfilePath: ./backend/trips-service/Dockerfile
+    dockerContext: ./backend/trips-service
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: viajes-postgres
+          property: connectionString
+      - key: TCP_PORT
+        value: 3001
+
+  # ---------------- operations-service (privado, TCP) ----------------
+  - type: pserv
+    name: operations-service
+    runtime: docker
+    plan: free
+    dockerfilePath: ./backend/operations-service/Dockerfile
+    dockerContext: ./backend/operations-service
+    envVars:
+      # NOTA: al usar una base de datos separada real (recomendado en
+      # producción), crea una segunda BD "viajes-postgres-operations" en
+      # Render y apunta este DATABASE_URL a esa. Para simplificar el
+      # despliegue de la prueba técnica, aquí se reutiliza el mismo
+      # servidor Postgres con otra base de datos lógica.
+      - key: DATABASE_URL
+        fromDatabase:
+          name: viajes-postgres
+          property: connectionString
+      - key: TCP_PORT
+        value: 3002
+      - key: TRIPS_SERVICE_HOST
+        fromService:
+          type: pserv
+          name: trips-service
+          property: host
+      - key: TRIPS_SERVICE_PORT
+        value: 3001
+
+  # ---------------- api-gateway (público, HTTP) ----------------
+  - type: web
+    name: api-gateway
+    runtime: docker
+    plan: free
+    dockerfilePath: ./backend/api-gateway/Dockerfile
+    dockerContext: ./backend/api-gateway
+    healthCheckPath: /api/health
+    envVars:
+      - key: PORT
+        value: 3000
+      - key: JWT_SECRET
+        generateValue: true
+      - key: JWT_EXPIRES_IN
+        value: 8h
+      - key: CORS_ORIGIN
+        value: "*" # Reemplazar por la URL real del frontend en Vercel/Netlify
+      - key: TRIPS_SERVICE_HOST
+        fromService:
+          type: pserv
+          name: trips-service
+          property: host
+      - key: TRIPS_SERVICE_PORT
+        value: 3001
+      - key: OPERATIONS_SERVICE_HOST
+        fromService:
+          type: pserv
+          name: operations-service
+          property: host
+      - key: OPERATIONS_SERVICE_PORT
+        value: 3002
