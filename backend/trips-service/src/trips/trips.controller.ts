@@ -1,7 +1,8 @@
-import { Body, Controller, Delete, Get, Param, Post, Query, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post, Query, UseGuards } from '@nestjs/common';
 import { InternalAuthGuard } from '../common/guards/internal-auth.guard';
 import { TripsService } from './trips.service';
 import { CreateTripDto } from '../common/dto/create-trip.dto';
+import { UpdateTripDto } from '../common/dto/update-trip.dto';
 
 @UseGuards(InternalAuthGuard)
 @Controller('trips')
@@ -49,6 +50,11 @@ export class TripsController {
   @Get(':id')
   findOne(@Param('id') id: string) {
     return this.tripsService.findOne(id);
+  }
+
+  @Patch(':id')
+  update(@Param('id') id: string, @Body() dto: UpdateTripDto) {
+    return this.tripsService.update(id, dto);
   }
 
   @Delete(':id')

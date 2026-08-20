@@ -61,6 +61,16 @@ export class TripsService {
     return firstValueFrom(this.http.post<Trip>(this.base, payload));
   }
 
+  async update(id: string, payload: {
+    name: string;
+    origin: string;
+    destination: string;
+    driverId: string;
+    stops?: string[];
+  }): Promise<Trip> {
+    return firstValueFrom(this.http.patch<Trip>(`${this.base}/${id}`, payload));
+  }
+
   async saveSignature(id: string, signatureData: string): Promise<Trip> {
     const trip = await firstValueFrom(
       this.http.post<Trip>(`${this.base}/${id}/signature`, { signatureData }),

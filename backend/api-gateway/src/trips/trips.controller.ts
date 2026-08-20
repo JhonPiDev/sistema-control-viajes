@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Param, Post, Query, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post, Query, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../common/guards/roles.guard';
@@ -7,6 +7,7 @@ import { CurrentUser, CurrentUserPayload } from '../common/decorators/current-us
 import { callService } from '../common/rpc.helper';
 import { TRIPS_SERVICE_URL } from '../common/service-urls';
 import { CreateTripDto } from './dto/create-trip.dto';
+import { UpdateTripDto } from './dto/update-trip.dto';
 import { SignatureDto } from './dto/signature.dto';
 import { PaginationDto } from '../common/dto/pagination.dto';
 import { TripsCleanupService } from './trips-cleanup.service';
@@ -57,6 +58,14 @@ export class TripsController {
   @Roles('ADMIN', 'DRIVER')
   findOne(@Param('id') id: string) {
     return callService(TRIPS_SERVICE_URL, 'GET', `/trips/${id}`);
+  }
+
+  // Solo se puede editar mientras el viaje está PENDIENTE (trips-service lo
+  // valida); es la alternativa a "eliminar" para esos viajes.
+  @Patch(':id')
+  @Roles('ADMIN')
+  update(@Param('id') id: string, @Body() dto: UpdateTripDto) {
+    return callService(TRIPS_SERVICE_URL, 'PATCH', `/trips/${id}`, dto);
   }
 
   @Post(':id/signature')

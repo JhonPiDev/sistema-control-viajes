@@ -25,6 +25,11 @@ export const routes: Routes = [
           import('./pages/admin/trip-create/trip-create.page').then((m) => m.TripCreatePage),
       },
       {
+        path: 'trips/:id/edit',
+        loadComponent: () =>
+          import('./pages/admin/trip-create/trip-create.page').then((m) => m.TripCreatePage),
+      },
+      {
         path: 'trips/:id',
         loadComponent: () =>
           import('./pages/admin/trip-detail/trip-detail.page').then((m) => m.TripDetailPage),

@@ -49,29 +49,14 @@ async function main() {
     },
   });
 
-  const existingTrip = await prisma.trip.findFirst({
-    where: { name: 'Bogotá - Medellín (Demo)' },
-  });
-
-  if (!existingTrip) {
-    await prisma.trip.create({
-      data: {
-        name: 'Bogotá - Medellín (Demo)',
-        origin: 'Terminal Salitre, Bogotá',
-        destination: 'Terminal Norte, Medellín',
-        driverId: driver.id,
-        createdById: admin.id,
-        passengers: {
-          create: [
-            { name: 'Juan Pérez', document: 'CC 1001234567' },
-            { name: 'María Gómez', document: 'CC 1002345678' },
-            { name: 'Pedro Ramírez', document: 'CC 1003456789' },
-            { name: 'Laura Torres', document: 'CC 1004567890' },
-          ],
-        },
-      },
-    });
-  }
+  // A propósito NO se crea ningún viaje de demostración: este seed corre en
+  // cada arranque del contenedor (docker-entrypoint.sh -> "prisma db seed"),
+  // y en el plan gratuito de Render eso pasa cada vez que el servicio
+  // despierta de dormido. Antes había un viaje "Bogotá - Medellín (Demo)"
+  // que se recreaba solo si se borraba (el findFirst + create de abajo era
+  // idempotente para SEGUIR existiendo, no para quedarse borrado). Se quitó
+  // para que el dashboard quede realmente vacío para quien prueba la app
+  // por primera vez, y para que un viaje borrado no "reaparezca" solo.
 
   console.log('✅ Seed completado');
   console.log('----------------------------------------');

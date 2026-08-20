@@ -5,6 +5,7 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateTripDto } from '../common/dto/create-trip.dto';
+import { UpdateTripDto } from '../common/dto/update-trip.dto';
 import { PaginationDto } from '../common/dto/pagination.dto';
 import { TripStatus } from '@prisma/client';
 
@@ -124,6 +125,43 @@ export class TripsService {
   }
 
   /**
+   * Solo se puede editar un viaje mientras está PENDIENTE: una vez que
+   * arranca ya hay firma, posiblemente pasajeros abordados, etc. — cambiar
+   * la ruta o el conductor en ese punto dejaría datos inconsistentes. Las
+   * paradas se reemplazan completas (borra las viejas y crea las nuevas en
+   * el orden recibido); es seguro porque en PENDING nunca hay pasajeros
+   * todavía asociados a una parada (eso solo pasa con el viaje en curso).
+   */
+  async update(id: string, dto: UpdateTripDto) {
+    const trip = await this.findOne(id);
+    if (trip.status !== TripStatus.PENDING) {
+      throw new BadRequestException(
+        'Solo se pueden editar viajes pendientes. Este ya inició o finalizó.',
+      );
+    }
+    return this.prisma.trip.update({
+      where: { id },
+      data: {
+        name: dto.name,
+        origin: dto.origin,
+        destination: dto.destination,
+        driverId: dto.driverId,
+        stops: dto.stops
+          ? {
+              deleteMany: {},
+              create: dto.stops.map((city, index) => ({ city, order: index + 1 })),
+            }
+          : { deleteMany: {} },
+      },
+      include: {
+        passengers: { include: { stop: true } },
+        driver: true,
+        stops: { orderBy: { order: 'asc' } },
+      },
+    });
+  }
+
+  /**
    * Viajes FINALIZADOS hace más de `days` días: candidatos a limpieza
    * automática (el gateway los usa en su tarea programada). Solo se
    * consideran FINISHED porque un viaje pendiente o en curso nunca debería
@@ -138,13 +176,24 @@ export class TripsService {
   }
 
   /**
-   * Elimina el viaje. Pasajeros y paradas se borran en cascada (definido en
-   * el schema de Prisma). Gastos y novedades viven en operations-service
-   * (otra base de datos), así que quien llama a esto primero debe pedirle a
-   * ese servicio que borre lo suyo — ver ReportsCleanupService en el gateway.
+   * Elimina el viaje. Solo se permite si ya está FINALIZADO: uno pendiente
+   * se edita (o se deja pendiente) en vez de borrarse, y uno en curso debe
+   * cerrarse primero — borrar un viaje activo le tumbaría la app al
+   * conductor a mitad de ruta. Pasajeros y paradas se borran en cascada
+   * (definido en el schema de Prisma). Gastos y novedades viven en
+   * operations-service (otra base de datos), así que quien llama a esto
+   * primero debe pedirle a ese servicio que borre lo suyo — ver
+   * TripsCleanupService en el gateway.
    */
   async remove(id: string) {
-    await this.findOne(id); // 404 si no existe
+    const trip = await this.findOne(id);
+    if (trip.status !== TripStatus.FINISHED) {
+      throw new BadRequestException(
+        trip.status === TripStatus.PENDING
+          ? 'No se puede eliminar un viaje pendiente. Edítalo o espera a que se complete.'
+          : 'No se puede eliminar un viaje en curso. Debe cerrarse primero.',
+      );
+    }
     await this.prisma.trip.delete({ where: { id } });
     return { deleted: true };
   }

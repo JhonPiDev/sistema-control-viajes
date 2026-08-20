@@ -1,7 +1,7 @@
 import { Component, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { Router } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import {
   IonHeader, IonToolbar, IonTitle, IonContent, IonButtons, IonBackButton,
   IonItem, IonLabel, IonInput, IonSelect, IonSelectOption, IonButton, IonIcon,
@@ -23,7 +23,7 @@ interface PassengerRow { name: string; document: string; }
   selector: 'app-trip-create',
   standalone: true,
   imports: [
-    CommonModule, FormsModule, IonHeader, IonToolbar, IonTitle, IonContent,
+    CommonModule, FormsModule, RouterLink, IonHeader, IonToolbar, IonTitle, IonContent,
     IonButtons, IonBackButton, IonItem, IonLabel, IonInput, IonSelect,
     IonSelectOption, IonButton, IonIcon, IonList, IonSpinner, IonText,
   ],
@@ -31,12 +31,22 @@ interface PassengerRow { name: string; document: string; }
     <ion-header>
       <ion-toolbar>
         <ion-buttons slot="start"><ion-back-button defaultHref="/admin/dashboard"></ion-back-button></ion-buttons>
-        <ion-title>Nuevo Viaje</ion-title>
+        <ion-title>{{ editMode() ? 'Editar Viaje' : 'Nuevo Viaje' }}</ion-title>
       </ion-toolbar>
     </ion-header>
 
     <ion-content class="ion-padding">
       <div class="ion-page-desktop">
+        @if (editMode() && loadingTrip()) {
+          <div class="empty-state"><ion-spinner></ion-spinner></div>
+        } @else if (editMode() && blockedReason()) {
+          <div class="card-surface">
+            <p>{{ blockedReason() }}</p>
+            <ion-button expand="block" fill="outline" class="ion-margin-top" routerLink="/admin/dashboard">
+              Volver al panel
+            </ion-button>
+          </div>
+        } @else {
         <form (ngSubmit)="submit()">
           <div class="card-surface">
             <p class="section-title"><ion-icon name="map-outline"></ion-icon> Datos del viaje</p>
@@ -100,24 +110,30 @@ interface PassengerRow { name: string; document: string; }
             </ion-button>
           </div>
 
-          <div class="card-surface ion-margin-top">
-            <p class="section-title"><ion-icon name="people-outline"></ion-icon> Lista de pasajeros</p>
-            <ion-list class="list-cards">
-              @for (p of passengers(); track $index) {
-                <ion-item lines="none">
-                  <ion-input placeholder="Nombre" [(ngModel)]="p.name" [name]="'pname'+$index"></ion-input>
-                  <ion-input placeholder="Documento" [(ngModel)]="p.document" [name]="'pdoc'+$index"></ion-input>
-                  <ion-button fill="clear" color="danger" slot="end" (click)="removePassenger($index)">
-                    <ion-icon name="trash-outline" slot="icon-only"></ion-icon>
-                  </ion-button>
-                </ion-item>
-              }
-            </ion-list>
-            <ion-button fill="outline" size="small" (click)="addPassenger()" type="button">
-              <ion-icon name="add-circle-outline" slot="start"></ion-icon>
-              Agregar pasajero
-            </ion-button>
-          </div>
+          @if (!editMode()) {
+            <div class="card-surface ion-margin-top">
+              <p class="section-title"><ion-icon name="people-outline"></ion-icon> Lista de pasajeros</p>
+              <ion-list class="list-cards">
+                @for (p of passengers(); track $index) {
+                  <ion-item lines="none">
+                    <ion-input placeholder="Nombre" [(ngModel)]="p.name" [name]="'pname'+$index"></ion-input>
+                    <ion-input placeholder="Documento" [(ngModel)]="p.document" [name]="'pdoc'+$index"></ion-input>
+                    <ion-button fill="clear" color="danger" slot="end" (click)="removePassenger($index)">
+                      <ion-icon name="trash-outline" slot="icon-only"></ion-icon>
+                    </ion-button>
+                  </ion-item>
+                }
+              </ion-list>
+              <ion-button fill="outline" size="small" (click)="addPassenger()" type="button">
+                <ion-icon name="add-circle-outline" slot="start"></ion-icon>
+                Agregar pasajero
+              </ion-button>
+            </div>
+          } @else {
+            <p class="hint ion-margin-top">
+              La lista de pasajeros de origen no se edita aquí; agrégalos desde el detalle del viaje.
+            </p>
+          }
 
           @if (error()) {
             <ion-text color="danger"><p class="ion-margin-top">{{ error() }}</p></ion-text>
@@ -125,10 +141,11 @@ interface PassengerRow { name: string; document: string; }
 
           <ion-button expand="block" type="submit" class="ion-margin-top" [disabled]="saving()">
             @if (saving()) { <ion-spinner name="dots"></ion-spinner> } @else {
-              <ion-icon name="save-outline" slot="start"></ion-icon> Crear viaje
+              <ion-icon name="save-outline" slot="start"></ion-icon> {{ editMode() ? 'Guardar cambios' : 'Crear viaje' }}
             }
           </ion-button>
         </form>
+        }
       </div>
     </ion-content>
   `,
@@ -175,10 +192,18 @@ export class TripCreatePage implements OnInit {
   saving = signal(false);
   error = signal<string | null>(null);
 
+  // Modo edición: la misma pantalla sirve para crear y para editar un
+  // viaje pendiente, así no se duplica todo el formulario de rutas/paradas.
+  editMode = signal(false);
+  loadingTrip = signal(false);
+  blockedReason = signal<string | null>(null);
+  private tripId: string | null = null;
+
   constructor(
     private tripsService: TripsService,
     private driversService: DriversService,
     private router: Router,
+    private route: ActivatedRoute,
     private modalCtrl: ModalController,
   ) {
     addIcons({
@@ -189,6 +214,29 @@ export class TripCreatePage implements OnInit {
 
   async ngOnInit() {
     this.drivers.set(await this.driversService.list());
+
+    this.tripId = this.route.snapshot.paramMap.get('id');
+    if (this.tripId) {
+      this.editMode.set(true);
+      this.loadingTrip.set(true);
+      try {
+        const trip = await this.tripsService.getById(this.tripId);
+        if (trip.status !== 'PENDING') {
+          this.blockedReason.set(
+            'Este viaje ya no está pendiente, así que no se puede editar (solo se pueden eliminar los finalizados).',
+          );
+          return;
+        }
+        this.origin = trip.origin;
+        this.destination = trip.destination;
+        this.driverId = trip.driverId;
+        this.stops.set(trip.stops.map((s) => s.city));
+      } catch {
+        this.blockedReason.set('No se pudo cargar el viaje a editar.');
+      } finally {
+        this.loadingTrip.set(false);
+      }
+    }
   }
 
   private async pickCity(title: string): Promise<string | null> {
@@ -239,18 +287,29 @@ export class TripCreatePage implements OnInit {
     }
     this.saving.set(true);
     try {
-      const validPassengers = this.passengers().filter((p) => p.name && p.document);
-      await this.tripsService.create({
-        name: this.tripName(),
-        origin: this.origin,
-        destination: this.destination,
-        driverId: this.driverId,
-        passengers: validPassengers,
-        stops: this.stops(),
-      });
-      this.router.navigate(['/admin/dashboard']);
+      if (this.editMode() && this.tripId) {
+        await this.tripsService.update(this.tripId, {
+          name: this.tripName(),
+          origin: this.origin,
+          destination: this.destination,
+          driverId: this.driverId,
+          stops: this.stops(),
+        });
+        this.router.navigate(['/admin/dashboard']);
+      } else {
+        const validPassengers = this.passengers().filter((p) => p.name && p.document);
+        await this.tripsService.create({
+          name: this.tripName(),
+          origin: this.origin,
+          destination: this.destination,
+          driverId: this.driverId,
+          passengers: validPassengers,
+          stops: this.stops(),
+        });
+        this.router.navigate(['/admin/dashboard']);
+      }
     } catch (e: any) {
-      this.error.set(e?.error?.message || 'No se pudo crear el viaje');
+      this.error.set(e?.error?.message || (this.editMode() ? 'No se pudo guardar el viaje' : 'No se pudo crear el viaje'));
     } finally {
       this.saving.set(false);
     }

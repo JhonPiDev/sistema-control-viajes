@@ -1,10 +1,10 @@
 import { Component, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { ActivatedRoute } from '@angular/router';
+import { ActivatedRoute, RouterLink } from '@angular/router';
 import {
   IonHeader, IonToolbar, IonTitle, IonContent, IonButtons, IonBackButton,
   IonBadge, IonList, IonItem, IonLabel, IonIcon, IonSpinner, IonRefresher,
-  IonRefresherContent, IonChip,
+  IonRefresherContent, IonChip, IonButton,
 } from '@ionic/angular/standalone';
 import { addIcons } from 'ionicons';
 import {
@@ -21,15 +21,22 @@ import { Trip, Expense, Incident, Passenger } from '../../../core/models/models'
   selector: 'app-trip-detail',
   standalone: true,
   imports: [
-    CommonModule, IonHeader, IonToolbar, IonTitle, IonContent, IonButtons,
+    CommonModule, RouterLink, IonHeader, IonToolbar, IonTitle, IonContent, IonButtons,
     IonBackButton, IonBadge, IonList, IonItem, IonLabel, IonIcon, IonSpinner,
-    IonRefresher, IonRefresherContent, IonChip,
+    IonRefresher, IonRefresherContent, IonChip, IonButton,
   ],
   template: `
     <ion-header>
       <ion-toolbar>
         <ion-buttons slot="start"><ion-back-button defaultHref="/admin/dashboard"></ion-back-button></ion-buttons>
         <ion-title>{{ trip()?.name || 'Viaje' }}</ion-title>
+        @if (trip()?.status === 'PENDING') {
+          <ion-buttons slot="end">
+            <ion-button [routerLink]="['/admin/trips', trip()!.id, 'edit']">
+              <ion-icon slot="icon-only" name="create-outline"></ion-icon>
+            </ion-button>
+          </ion-buttons>
+        }
       </ion-toolbar>
     </ion-header>
 
