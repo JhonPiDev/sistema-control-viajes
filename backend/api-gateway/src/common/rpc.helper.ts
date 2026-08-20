@@ -16,7 +16,7 @@ import { HttpException, HttpStatus } from '@nestjs/common';
  */
 export async function callService<T>(
   baseUrl: string,
-  method: 'GET' | 'POST' | 'PATCH',
+  method: 'GET' | 'POST' | 'PATCH' | 'DELETE',
   path: string,
   body?: unknown,
 ): Promise<T> {

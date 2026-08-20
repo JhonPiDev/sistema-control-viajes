@@ -96,3 +96,5 @@ services:
         value: https://trips-service.onrender.com # verifica/ajusta tras el primer deploy
       - key: OPERATIONS_SERVICE_URL
         value: https://operations-service.onrender.com # verifica/ajusta tras el primer deploy
+      - key: TRIP_RETENTION_DAYS
+        value: "90" # días que se conservan los viajes finalizados antes de borrarse solos

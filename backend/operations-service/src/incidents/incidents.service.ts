@@ -29,4 +29,10 @@ export class IncidentsService {
       orderBy: { createdAt: 'desc' },
     });
   }
+
+  /** Usado por el gateway al borrar un viaje (manual o por limpieza automática) */
+  async deleteByTrip(tripId: string) {
+    const { count } = await this.prisma.incident.deleteMany({ where: { tripId } });
+    return { deleted: count };
+  }
 }

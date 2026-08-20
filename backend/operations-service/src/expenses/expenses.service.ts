@@ -43,4 +43,10 @@ export class ExpensesService {
       count: result._count,
     };
   }
+
+  /** Usado por el gateway al borrar un viaje (manual o por limpieza automática) */
+  async deleteByTrip(tripId: string) {
+    const { count } = await this.prisma.expense.deleteMany({ where: { tripId } });
+    return { deleted: count };
+  }
 }

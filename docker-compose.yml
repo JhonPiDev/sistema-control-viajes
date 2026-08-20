@@ -65,6 +65,7 @@ services:
       INTERNAL_API_KEY: ${INTERNAL_API_KEY}
       TRIPS_SERVICE_URL: http://trips-service:${TRIPS_SERVICE_PORT}
       OPERATIONS_SERVICE_URL: http://operations-service:${OPERATIONS_SERVICE_PORT}
+      TRIP_RETENTION_DAYS: ${TRIP_RETENTION_DAYS:-90}
     ports:
       - "${GATEWAY_PORT}:${GATEWAY_PORT}"
     depends_on:

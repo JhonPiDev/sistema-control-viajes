@@ -4,16 +4,19 @@ import { RouterLink } from '@angular/router';
 import {
   IonHeader, IonToolbar, IonTitle, IonContent, IonButtons, IonButton, IonIcon,
   IonList, IonItem, IonLabel, IonBadge, IonSegment, IonSegmentButton, IonRefresher,
-  IonRefresherContent, IonSpinner, IonFab, IonFabButton, IonAvatar,
+  IonRefresherContent, IonSpinner, IonFab, IonFabButton, IonAvatar, AlertController,
 } from '@ionic/angular/standalone';
 import { addIcons } from 'ionicons';
 import {
   addOutline, settingsOutline, peopleOutline, cashOutline, busOutline,
-  checkmarkDoneCircleOutline, timeOutline, chevronForwardOutline,
+  checkmarkDoneCircleOutline, timeOutline, chevronForwardOutline, trashOutline,
+  chevronBackOutline,
 } from 'ionicons/icons';
 import { TripsService } from '../../../core/services/trips.service';
 import { AuthService } from '../../../core/services/auth.service';
 import { Trip, TripStats, TripStatus } from '../../../core/models/models';
+
+const PAGE_SIZE = 10;
 
 const STATUS_LABEL: Record<TripStatus, string> = {
   PENDING: 'Pendiente',
@@ -104,22 +107,44 @@ const STATUS_COLOR: Record<TripStatus, string> = {
         } @else {
           <ion-list class="list-cards ion-margin-top">
             @for (trip of trips.trips(); track trip.id) {
-              <ion-item [routerLink]="['/admin/trips', trip.id]" button detail="false" lines="none">
+              <ion-item lines="none">
                 <ion-avatar slot="start" class="trip-avatar" [style.background]="avatarBg(trip.status)">
                   <ion-icon name="bus-outline"></ion-icon>
                 </ion-avatar>
-                <ion-label>
+                <ion-label [routerLink]="['/admin/trips', trip.id]" style="cursor:pointer;">
                   <h2>{{ trip.name }}</h2>
                   <p>{{ trip.origin }} → {{ trip.destination }}</p>
                   <p>Conductor: {{ trip.driver?.name }} · {{ trip.passengers.length }} pasajeros</p>
                 </ion-label>
                 <div slot="end" class="trip-end">
                   <ion-badge [color]="STATUS_COLOR[trip.status]">{{ STATUS_LABEL[trip.status] }}</ion-badge>
-                  <ion-icon name="chevron-forward-outline" class="chev"></ion-icon>
+                  <div class="trip-actions">
+                    <ion-button fill="clear" color="danger" size="small" (click)="confirmDelete(trip, $event)">
+                      <ion-icon name="trash-outline" slot="icon-only"></ion-icon>
+                    </ion-button>
+                    <ion-icon
+                      name="chevron-forward-outline" class="chev"
+                      [routerLink]="['/admin/trips', trip.id]" style="cursor:pointer;">
+                    </ion-icon>
+                  </div>
                 </div>
               </ion-item>
             }
           </ion-list>
+
+          @if (meta().totalPages > 1) {
+            <div class="pagination-bar">
+              <ion-button fill="outline" size="small" [disabled]="page() <= 1" (click)="goToPage(page() - 1)">
+                <ion-icon name="chevron-back-outline" slot="start"></ion-icon>
+                Anterior
+              </ion-button>
+              <span class="pagination-label">Página {{ page() }} de {{ meta().totalPages }} · {{ meta().total }} viajes</span>
+              <ion-button fill="outline" size="small" [disabled]="page() >= meta().totalPages" (click)="goToPage(page() + 1)">
+                Siguiente
+                <ion-icon name="chevron-forward-outline" slot="end"></ion-icon>
+              </ion-button>
+            </div>
+          }
         }
       </div>
 
@@ -138,9 +163,24 @@ const STATUS_COLOR: Record<TripStatus, string> = {
       ion-icon { font-size: 20px; }
     }
     .trip-end {
-      display: flex; flex-direction: column; align-items: flex-end; gap: 6px;
+      display: flex; flex-direction: column; align-items: flex-end; gap: 4px;
     }
-    .chev { color: var(--app-color-text-muted); font-size: 16px; }
+    .trip-actions {
+      display: flex; align-items: center; gap: 2px;
+    }
+    .chev { color: var(--app-color-text-muted); font-size: 16px; padding: 4px; }
+    .pagination-bar {
+      display: flex; align-items: center; justify-content: space-between;
+      gap: 10px;
+      margin: var(--app-space-md) 0;
+      flex-wrap: wrap;
+    }
+    .pagination-label {
+      font-size: 0.8rem;
+      color: var(--app-color-text-muted);
+      text-align: center;
+      flex: 1;
+    }
   `],
 })
 export class DashboardPage implements OnInit {
@@ -154,10 +194,21 @@ export class DashboardPage implements OnInit {
   // justo la lista YA filtrada por el segmento seleccionado).
   stats = signal<TripStats | null>(null);
 
-  constructor(public trips: TripsService, public auth: AuthService) {
+  // Paginación real (no todo en una sola lista con scroll infinito): la
+  // API ya soportaba page/limit, aquí se expone en la UI con botones
+  // Anterior/Siguiente en vez de traer 50 viajes de una.
+  page = signal(1);
+  meta = signal<{ total: number; totalPages: number }>({ total: 0, totalPages: 1 });
+
+  constructor(
+    public trips: TripsService,
+    public auth: AuthService,
+    private alertController: AlertController,
+  ) {
     addIcons({
       addOutline, settingsOutline, peopleOutline, cashOutline, busOutline,
-      checkmarkDoneCircleOutline, timeOutline, chevronForwardOutline,
+      checkmarkDoneCircleOutline, timeOutline, chevronForwardOutline, trashOutline,
+      chevronBackOutline,
     });
   }
 
@@ -166,10 +217,11 @@ export class DashboardPage implements OnInit {
   }
 
   async load() {
-    await Promise.all([
-      this.trips.list(1, 50, this.statusFilter() || undefined),
+    const [result] = await Promise.all([
+      this.trips.list(this.page(), PAGE_SIZE, this.statusFilter() || undefined),
       this.loadStats(),
     ]);
+    this.meta.set({ total: result.meta.total, totalPages: result.meta.totalPages });
   }
 
   async loadStats() {
@@ -187,7 +239,53 @@ export class DashboardPage implements OnInit {
 
   onFilterChange(ev: CustomEvent) {
     this.statusFilter.set(ev.detail.value);
+    this.page.set(1);
     this.load();
+  }
+
+  goToPage(p: number) {
+    if (p < 1 || p > this.meta().totalPages) return;
+    this.page.set(p);
+    this.load();
+  }
+
+  async confirmDelete(trip: Trip, ev: Event) {
+    ev.stopPropagation();
+    const inProgressWarning = trip.status === 'IN_PROGRESS'
+      ? ' Este viaje está EN RUTA en este momento — el conductor perderá acceso a él.'
+      : '';
+    const alert = await this.alertController.create({
+      header: 'Eliminar viaje',
+      message: `¿Seguro que quieres eliminar "${trip.name}"? Se borrarán también sus pasajeros, paradas, gastos y novedades. Esta acción no se puede deshacer.${inProgressWarning}`,
+      buttons: [
+        { text: 'Cancelar', role: 'cancel' },
+        {
+          text: 'Eliminar',
+          role: 'destructive',
+          handler: () => this.deleteTrip(trip),
+        },
+      ],
+    });
+    await alert.present();
+  }
+
+  private async deleteTrip(trip: Trip) {
+    try {
+      await this.trips.remove(trip.id);
+      // Si la página se quedó sin viajes tras borrar (ej. estabas en la
+      // última página con un solo item), retrocede una página.
+      if (this.trips.trips().length === 0 && this.page() > 1) {
+        this.page.update((p) => p - 1);
+      }
+      await this.load();
+    } catch (e: any) {
+      const alert = await this.alertController.create({
+        header: 'No se pudo eliminar',
+        message: e?.error?.message || 'Ocurrió un error al eliminar el viaje.',
+        buttons: ['OK'],
+      });
+      await alert.present();
+    }
   }
 
   async doRefresh(ev: CustomEvent) {

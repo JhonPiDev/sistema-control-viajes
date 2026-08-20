@@ -80,4 +80,9 @@ export class TripsService {
     this.currentTrip.set(trip);
     return trip;
   }
+
+  async remove(id: string): Promise<void> {
+    await firstValueFrom(this.http.delete(`${this.base}/${id}`));
+    this.trips.update((list) => list.filter((t) => t.id !== id));
+  }
 }

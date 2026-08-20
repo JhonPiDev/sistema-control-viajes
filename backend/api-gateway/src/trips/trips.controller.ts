@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Post, Query, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Post, Query, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../common/guards/roles.guard';
@@ -9,12 +9,15 @@ import { TRIPS_SERVICE_URL } from '../common/service-urls';
 import { CreateTripDto } from './dto/create-trip.dto';
 import { SignatureDto } from './dto/signature.dto';
 import { PaginationDto } from '../common/dto/pagination.dto';
+import { TripsCleanupService } from './trips-cleanup.service';
 
 @ApiTags('trips')
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Controller('trips')
 export class TripsController {
+  constructor(private readonly cleanup: TripsCleanupService) {}
+
   @Post()
   @Roles('ADMIN')
   create(@Body() dto: CreateTripDto, @CurrentUser() user: CurrentUserPayload) {
@@ -74,5 +77,14 @@ export class TripsController {
   @Roles('DRIVER')
   finish(@Param('id') id: string) {
     return callService(TRIPS_SERVICE_URL, 'POST', `/trips/${id}/finish`);
+  }
+
+  // Borra el viaje y, en cascada, sus gastos/novedades en operations-service
+  // y sus pasajeros/paradas en trips-service. Solo el admin puede hacerlo.
+  @Delete(':id')
+  @Roles('ADMIN')
+  async remove(@Param('id') id: string) {
+    await this.cleanup.deleteTripCascade(id);
+    return { deleted: true };
   }
 }

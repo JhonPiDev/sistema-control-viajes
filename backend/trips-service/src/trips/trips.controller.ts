@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Post, Query, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Post, Query, UseGuards } from '@nestjs/common';
 import { InternalAuthGuard } from '../common/guards/internal-auth.guard';
 import { TripsService } from './trips.service';
 import { CreateTripDto } from '../common/dto/create-trip.dto';
@@ -37,9 +37,23 @@ export class TripsController {
     return this.tripsService.getStats(driverId);
   }
 
+  // Igual que "stats": declarado antes de ":id" para que Nest no lo
+  // confunda con el parámetro de ruta. Usado por la tarea programada de
+  // limpieza automática en el gateway.
+  @Get('expired')
+  findExpired(@Query('days') daysRaw?: string) {
+    const days = Number(daysRaw) > 0 ? Number(daysRaw) : 90;
+    return this.tripsService.findExpired(days);
+  }
+
   @Get(':id')
   findOne(@Param('id') id: string) {
     return this.tripsService.findOne(id);
+  }
+
+  @Delete(':id')
+  remove(@Param('id') id: string) {
+    return this.tripsService.remove(id);
   }
 
   // Usado por operations-service para validar la regla de negocio "no

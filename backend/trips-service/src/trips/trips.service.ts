@@ -123,6 +123,32 @@ export class TripsService {
     return trip;
   }
 
+  /**
+   * Viajes FINALIZADOS hace más de `days` días: candidatos a limpieza
+   * automática (el gateway los usa en su tarea programada). Solo se
+   * consideran FINISHED porque un viaje pendiente o en curso nunca debería
+   * desaparecer solo, sin importar cuánto tiempo lleve creado.
+   */
+  async findExpired(days: number) {
+    const cutoff = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
+    return this.prisma.trip.findMany({
+      where: { status: TripStatus.FINISHED, finishedAt: { lt: cutoff } },
+      select: { id: true },
+    });
+  }
+
+  /**
+   * Elimina el viaje. Pasajeros y paradas se borran en cascada (definido en
+   * el schema de Prisma). Gastos y novedades viven en operations-service
+   * (otra base de datos), así que quien llama a esto primero debe pedirle a
+   * ese servicio que borre lo suyo — ver ReportsCleanupService en el gateway.
+   */
+  async remove(id: string) {
+    await this.findOne(id); // 404 si no existe
+    await this.prisma.trip.delete({ where: { id } });
+    return { deleted: true };
+  }
+
   /** Usado por operations-service (vía gateway/TCP) para validar reglas de negocio */
   async checkStatus(id: string) {
     const trip = await this.prisma.trip.findUnique({

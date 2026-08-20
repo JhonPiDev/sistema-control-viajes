@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Post, UseGuards } from '@nestjs/common';
 import { InternalAuthGuard } from '../common/guards/internal-auth.guard';
 import { IncidentsService } from './incidents.service';
 import { CreateIncidentDto } from '../common/dto/create-incident.dto';
@@ -16,5 +16,10 @@ export class IncidentsController {
   @Get('trip/:tripId')
   findByTrip(@Param('tripId') tripId: string) {
     return this.incidentsService.findByTrip(tripId);
+  }
+
+  @Delete('trip/:tripId')
+  deleteByTrip(@Param('tripId') tripId: string) {
+    return this.incidentsService.deleteByTrip(tripId);
   }
 }

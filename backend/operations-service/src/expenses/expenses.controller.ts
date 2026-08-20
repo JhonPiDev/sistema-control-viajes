@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Post, UseGuards } from '@nestjs/common';
 import { InternalAuthGuard } from '../common/guards/internal-auth.guard';
 import { ExpensesService } from './expenses.service';
 import { CreateExpenseDto } from '../common/dto/create-expense.dto';
@@ -21,5 +21,10 @@ export class ExpensesController {
   @Get('trip/:tripId/total')
   totalByTrip(@Param('tripId') tripId: string) {
     return this.expensesService.totalByTrip(tripId);
+  }
+
+  @Delete('trip/:tripId')
+  deleteByTrip(@Param('tripId') tripId: string) {
+    return this.expensesService.deleteByTrip(tripId);
   }
 }
