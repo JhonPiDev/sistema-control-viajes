@@ -74,7 +74,8 @@ services:
           name: viajes-postgres
           property: connectionString
       - key: TRIPS_SERVICE_URL
-        value: https://trips-service.onrender.com # verifica/ajusta tras el primer deploy
+        value: https://trips-service.onrender.com # valor inicial; se corrige a mano en el dashboard tras el primer deploy
+        sync: false # evita que Render pise el valor real cada vez que sincroniza el Blueprint
 
   # ---------------- api-gateway (público, único con documentación Swagger) ----------------
   - type: web
@@ -91,10 +92,13 @@ services:
       - key: JWT_EXPIRES_IN
         value: 8h
       - key: CORS_ORIGIN
-        value: "*" # Reemplazar por la URL real del frontend en Vercel/Netlify
+        value: "*" # valor inicial; se corrige a mano en el dashboard con la URL real del frontend
+        sync: false # evita que Render pise el valor real cada vez que sincroniza el Blueprint
       - key: TRIPS_SERVICE_URL
-        value: https://trips-service.onrender.com # verifica/ajusta tras el primer deploy
+        value: https://trips-service.onrender.com # valor inicial; se corrige a mano en el dashboard tras el primer deploy
+        sync: false # evita que Render pise el valor real cada vez que sincroniza el Blueprint
       - key: OPERATIONS_SERVICE_URL
-        value: https://operations-service.onrender.com # verifica/ajusta tras el primer deploy
+        value: https://operations-service.onrender.com # valor inicial; se corrige a mano en el dashboard tras el primer deploy
+        sync: false # evita que Render pise el valor real cada vez que sincroniza el Blueprint
       - key: TRIP_RETENTION_DAYS
         value: "90" # días que se conservan los viajes finalizados antes de borrarse solos
