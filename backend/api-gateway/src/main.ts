@@ -18,8 +18,20 @@ async function bootstrap() {
   app.use(urlencoded({ limit: '5mb', extended: true }));
 
   app.use(helmet());
+  // CORS_ORIGIN puede venir sin definir, como "*" (comodín literal) o como
+  // una lista separada por comas de orígenes reales (ej. la URL de Vercel).
+  // BUG que arregla esto: antes se hacía siempre "CORS_ORIGIN?.split(',')",
+  // así que si la variable llegaba a valer literalmente "*" (el default del
+  // Blueprint de Render, ver render.yaml), el resultado era el ARREGLO
+  // ["*"] en vez del comodín real — el paquete de cors compara el origen
+  // de la petición contra ese arreglo, no lo encuentra ("*" no es tu URL de
+  // Vercel), y rechaza todo sin mandar el header Access-Control-Allow-Origin
+  // (justo el error "blocked by CORS policy" que se ve en el navegador).
+  // Además, "origin: true" (no el string '*') es la forma correcta de
+  // permitir cualquier origen cuando además se usa credentials: true.
+  const corsOrigin = process.env.CORS_ORIGIN;
   app.enableCors({
-    origin: process.env.CORS_ORIGIN?.split(',') || '*',
+    origin: corsOrigin && corsOrigin !== '*' ? corsOrigin.split(',') : true,
     credentials: true,
   });
 
