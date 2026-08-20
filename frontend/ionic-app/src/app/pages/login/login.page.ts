@@ -62,6 +62,14 @@ import { AuthService } from '../../core/services/auth.service';
               </ion-button>
             </form>
 
+            <div class="demo-creds">
+              <div class="demo-creds-title">
+                <ion-icon name="shield-checkmark-outline"></ion-icon>
+                <span>Credenciales de prueba</span>
+              </div>
+              <div class="demo-row"><span class="role-tag role-admin">Admin</span><span>admin&#64;viajes.com / Admin123!</span></div>
+              <div class="demo-row"><span class="role-tag role-driver">Conductor</span><span>conductor&#64;viajes.com / Driver123!</span></div>
+            </div>
           </ion-card-content>
         </ion-card>
       </div>
@@ -178,7 +186,24 @@ export class LoginPage {
       const user = await this.auth.login(this.email, this.password);
       this.router.navigate([user.role === 'ADMIN' ? '/admin' : '/driver']);
     } catch (e: any) {
-      this.error.set(e?.error?.message || 'Credenciales inválidas');
+      // Antes esto siempre mostraba "Credenciales inválidas" sin importar la
+      // causa real, lo que confunde muchísimo cuando el problema es que el
+      // backend (plan gratuito de Render) está dormido/despertando o caído,
+      // no que el usuario/contraseña estén mal. Se distingue por el status
+      // HTTP: 0 = no hubo respuesta del servidor (dormido, red, CORS);
+      // 5xx = el servidor respondió pero con error; 401/lo demás = sí llegó
+      // a validar credenciales y las rechazó.
+      if (e?.status === 0) {
+        this.error.set(
+          'No se pudo conectar con el servidor. Si llevaba un rato sin uso (plan gratuito), puede estar despertando: espera unos 30-60 segundos y vuelve a intentar.',
+        );
+      } else if (e?.status >= 500) {
+        this.error.set(
+          'El servidor respondió con un error. Puede seguir despertando o hubo un problema en el último despliegue — espera un momento y vuelve a intentar.',
+        );
+      } else {
+        this.error.set(e?.error?.message || 'Credenciales inválidas');
+      }
     } finally {
       this.loading.set(false);
     }
