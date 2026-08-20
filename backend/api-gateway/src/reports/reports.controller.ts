@@ -37,11 +37,16 @@ export class ReportsController {
         driver: summary.trip.driver,
         startedAt: summary.trip.startedAt,
         finishedAt: summary.trip.finishedAt,
+        signatureData: summary.trip.signatureData,
+        signedAt: summary.trip.signedAt,
+        stops: summary.trip.stops,
       },
       passengers: {
         total: summary.passengersTotal,
         boarded: summary.passengersBoarded,
+        boardedAtOrigin: summary.passengersBoardedAtOrigin,
         list: summary.trip.passengers,
+        byStop: summary.stopsSummary,
       },
       expenses: {
         total: expenses.total,

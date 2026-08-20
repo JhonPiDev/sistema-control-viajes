@@ -30,6 +30,13 @@ export class TripsController {
     return this.tripsService.findAll({ page, limit, status }, driverId);
   }
 
+  // Declarado ANTES de ":id" a propósito: si no, Nest interpretaría
+  // "stats" como el parámetro :id de la ruta de abajo.
+  @Get('stats')
+  getStats(@Query('driverId') driverId?: string) {
+    return this.tripsService.getStats(driverId);
+  }
+
   @Get(':id')
   findOne(@Param('id') id: string) {
     return this.tripsService.findOne(id);

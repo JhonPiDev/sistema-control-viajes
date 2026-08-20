@@ -19,8 +19,11 @@ export class PassengersController {
     return callService(TRIPS_SERVICE_URL, 'GET', `/trips/${tripId}/passengers`);
   }
 
+  // ADMIN: puede agregar pasajeros en cualquier momento (ej. a la lista del
+  // origen). DRIVER: puede agregar pasajeros que abordan en una parada
+  // mientras el viaje está en curso (trips-service valida esa regla).
   @Post('trips/:tripId/passengers')
-  @Roles('ADMIN')
+  @Roles('ADMIN', 'DRIVER')
   add(@Param('tripId') tripId: string, @Body() dto: CreatePassengerDto) {
     return callService(TRIPS_SERVICE_URL, 'POST', `/trips/${tripId}/passengers`, dto);
   }

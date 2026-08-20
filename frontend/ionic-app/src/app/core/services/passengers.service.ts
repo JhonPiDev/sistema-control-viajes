@@ -14,11 +14,12 @@ export class PassengersService {
     );
   }
 
-  async add(tripId: string, name: string, document: string): Promise<Passenger> {
+  async add(tripId: string, name: string, document: string, stopId?: string): Promise<Passenger> {
     return firstValueFrom(
       this.http.post<Passenger>(`${this.config.apiUrl}/trips/${tripId}/passengers`, {
         name,
         document,
+        stopId,
       }),
     );
   }

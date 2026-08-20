@@ -8,10 +8,15 @@ import {
   IonSelectOption, IonTextarea, IonButton, IonIcon, IonList, IonBadge, IonSpinner,
 } from '@ionic/angular/standalone';
 import { addIcons } from 'ionicons';
-import { cashOutline, alertCircleOutline, addOutline } from 'ionicons/icons';
+import {
+  cashOutline, alertCircleOutline, addOutline, locationOutline,
+  personAddOutline, peopleOutline,
+} from 'ionicons/icons';
 import { ExpensesService } from '../../../core/services/expenses.service';
 import { IncidentsService } from '../../../core/services/incidents.service';
-import { Expense, ExpenseType, Incident, IncidentType } from '../../../core/models/models';
+import { PassengersService } from '../../../core/services/passengers.service';
+import { TripsService } from '../../../core/services/trips.service';
+import { Expense, ExpenseType, Incident, IncidentType, Passenger, Trip } from '../../../core/models/models';
 
 @Component({
   selector: 'app-en-route',
@@ -29,7 +34,11 @@ import { Expense, ExpenseType, Incident, IncidentType } from '../../../core/mode
         <ion-title>En Ruta</ion-title>
       </ion-toolbar>
       <ion-toolbar>
-        <ion-segment [value]="tab()" (ionChange)="tab.set($any($event.detail.value))">
+        <ion-segment [value]="tab()" (ionChange)="tab.set($any($event.detail.value))" scrollable="true">
+          <ion-segment-button value="stops">
+            <ion-icon name="location-outline"></ion-icon>
+            <ion-label>Paradas</ion-label>
+          </ion-segment-button>
           <ion-segment-button value="expenses">
             <ion-icon name="cash-outline"></ion-icon>
             <ion-label>Gastos</ion-label>
@@ -43,7 +52,61 @@ import { Expense, ExpenseType, Incident, IncidentType } from '../../../core/mode
     </ion-header>
 
     <ion-content class="ion-padding">
-      @if (tab() === 'expenses') {
+      @if (tab() === 'stops') {
+        @if (!trip()) {
+          <div class="empty-state"><ion-spinner></ion-spinner></div>
+        } @else {
+          <p class="hint">
+            Este viaje va de <strong>{{ trip()!.origin }}</strong> a <strong>{{ trip()!.destination }}</strong>{{ trip()!.stops.length ? ', pasando por:' : '.' }}
+          </p>
+
+          @if (trip()!.stops.length === 0) {
+            <p class="empty-state">Este viaje no tiene paradas intermedias planeadas.</p>
+          } @else {
+            <ion-list class="list-cards">
+              @for (s of trip()!.stops; track s.id) {
+                <ion-item lines="none" class="stop-item">
+                  <ion-label>
+                    <p class="stop-order">Parada {{ s.order }}</p>
+                    <h3>{{ s.city }}</h3>
+                    <p>
+                      <ion-icon name="people-outline"></ion-icon>
+                      {{ passengersAtStop(s.id).length }} pasajero(s) abordaron aquí
+                    </p>
+                  </ion-label>
+                  <ion-button
+                    slot="end" fill="outline" size="small"
+                    (click)="toggleAddForm(s.id)">
+                    <ion-icon name="person-add-outline" slot="start"></ion-icon>
+                    Agregar
+                  </ion-button>
+                </ion-item>
+
+                @if (addingAtStopId() === s.id) {
+                  <div class="card-surface add-passenger-form">
+                    <ion-item fill="outline">
+                      <ion-label position="floating">Nombre</ion-label>
+                      <ion-input [(ngModel)]="newPassengerName" [name]="'name-'+s.id"></ion-input>
+                    </ion-item>
+                    <ion-item fill="outline" class="ion-margin-bottom">
+                      <ion-label position="floating">Documento</ion-label>
+                      <ion-input [(ngModel)]="newPassengerDocument" [name]="'doc-'+s.id"></ion-input>
+                    </ion-item>
+                    @if (addError()) {
+                      <p class="error-hint">{{ addError() }}</p>
+                    }
+                    <ion-button expand="block" (click)="addPassengerAtStop(s.id)" [disabled]="addingPassenger()">
+                      @if (addingPassenger()) { <ion-spinner name="dots"></ion-spinner> } @else {
+                        <ion-icon name="person-add-outline" slot="start"></ion-icon> Guardar pasajero
+                      }
+                    </ion-button>
+                  </div>
+                }
+              }
+            </ion-list>
+          }
+        }
+      } @else if (tab() === 'expenses') {
         <div class="card-surface">
           <ion-item fill="outline">
             <ion-label position="floating">Tipo de gasto</ion-label>
@@ -115,12 +178,30 @@ import { Expense, ExpenseType, Incident, IncidentType } from '../../../core/mode
       }
     </ion-content>
   `,
+  styles: [`
+    .hint {
+      color: var(--app-color-text-muted);
+      font-size: 0.88rem;
+      margin: 4px 0 var(--app-space-md);
+    }
+    .stop-order { font-size: 0.72rem; color: var(--app-color-text-muted); margin: 0 0 2px; }
+    .stop-item p ion-icon { font-size: 13px; vertical-align: -2px; margin-right: 2px; }
+    .add-passenger-form { margin: 0 0 var(--app-space-md); }
+    .error-hint { color: var(--app-color-danger, #dc2626); font-size: 0.82rem; margin: 0 0 10px; }
+  `],
 })
 export class EnRoutePage implements OnInit {
-  tab = signal<'expenses' | 'incidents'>('expenses');
+  tab = signal<'stops' | 'expenses' | 'incidents'>('stops');
+  trip = signal<Trip | null>(null);
   expenses = signal<Expense[]>([]);
   incidents = signal<Incident[]>([]);
   saving = signal(false);
+
+  addingAtStopId = signal<string | null>(null);
+  newPassengerName = '';
+  newPassengerDocument = '';
+  addingPassenger = signal(false);
+  addError = signal<string | null>(null);
 
   expenseType: ExpenseType = 'FUEL';
   expenseAmount: number | null = null;
@@ -135,8 +216,13 @@ export class EnRoutePage implements OnInit {
     private route: ActivatedRoute,
     private expensesService: ExpensesService,
     private incidentsService: IncidentsService,
+    private passengersService: PassengersService,
+    private tripsService: TripsService,
   ) {
-    addIcons({ cashOutline, alertCircleOutline, addOutline });
+    addIcons({
+      cashOutline, alertCircleOutline, addOutline, locationOutline,
+      personAddOutline, peopleOutline,
+    });
   }
 
   async ngOnInit() {
@@ -145,8 +231,48 @@ export class EnRoutePage implements OnInit {
   }
 
   async reload() {
-    this.expenses.set(await this.expensesService.findByTrip(this.tripId));
-    this.incidents.set(await this.incidentsService.findByTrip(this.tripId));
+    const [trip, expenses, incidents] = await Promise.all([
+      this.tripsService.getById(this.tripId),
+      this.expensesService.findByTrip(this.tripId),
+      this.incidentsService.findByTrip(this.tripId),
+    ]);
+    this.trip.set(trip);
+    this.expenses.set(expenses);
+    this.incidents.set(incidents);
+  }
+
+  passengersAtStop(stopId: string): Passenger[] {
+    return (this.trip()?.passengers || []).filter((p) => p.stopId === stopId);
+  }
+
+  toggleAddForm(stopId: string) {
+    const isOpen = this.addingAtStopId() === stopId;
+    this.addingAtStopId.set(isOpen ? null : stopId);
+    this.newPassengerName = '';
+    this.newPassengerDocument = '';
+    this.addError.set(null);
+  }
+
+  async addPassengerAtStop(stopId: string) {
+    this.addError.set(null);
+    if (!this.newPassengerName.trim() || !this.newPassengerDocument.trim()) {
+      this.addError.set('Completa el nombre y el documento del pasajero.');
+      return;
+    }
+    this.addingPassenger.set(true);
+    try {
+      await this.passengersService.add(
+        this.tripId, this.newPassengerName.trim(), this.newPassengerDocument.trim(), stopId,
+      );
+      this.newPassengerName = '';
+      this.newPassengerDocument = '';
+      this.addingAtStopId.set(null);
+      await this.reload();
+    } catch (e: any) {
+      this.addError.set(e?.error?.message || 'No se pudo agregar el pasajero.');
+    } finally {
+      this.addingPassenger.set(false);
+    }
   }
 
   async addExpense() {

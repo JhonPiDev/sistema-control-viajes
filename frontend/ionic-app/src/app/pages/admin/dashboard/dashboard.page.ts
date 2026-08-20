@@ -1,4 +1,4 @@
-import { Component, OnInit, computed, signal } from '@angular/core';
+import { Component, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import {
@@ -13,7 +13,7 @@ import {
 } from 'ionicons/icons';
 import { TripsService } from '../../../core/services/trips.service';
 import { AuthService } from '../../../core/services/auth.service';
-import { Trip, TripStatus } from '../../../core/models/models';
+import { Trip, TripStats, TripStatus } from '../../../core/models/models';
 
 const STATUS_LABEL: Record<TripStatus, string> = {
   PENDING: 'Pendiente',
@@ -61,28 +61,28 @@ const STATUS_COLOR: Record<TripStatus, string> = {
             <div class="stat-icon" style="background: rgba(var(--app-color-primary-rgb), .12); color: var(--app-color-primary);">
               <ion-icon name="bus-outline"></ion-icon>
             </div>
-            <span class="stat-value">{{ totalTrips() }}</span>
+            <span class="stat-value">{{ stats()?.total ?? 0 }}</span>
             <span class="stat-label">Viajes totales</span>
           </div>
           <div class="stat-card">
             <div class="stat-icon" style="background: rgba(245, 158, 11, .14); color: var(--app-color-warning);">
               <ion-icon name="time-outline"></ion-icon>
             </div>
-            <span class="stat-value">{{ countByStatus('IN_PROGRESS') }}</span>
+            <span class="stat-value">{{ stats()?.byStatus?.IN_PROGRESS ?? 0 }}</span>
             <span class="stat-label">En ruta</span>
           </div>
           <div class="stat-card">
             <div class="stat-icon" style="background: rgba(22, 163, 74, .14); color: var(--app-color-success);">
               <ion-icon name="checkmark-done-circle-outline"></ion-icon>
             </div>
-            <span class="stat-value">{{ countByStatus('FINISHED') }}</span>
+            <span class="stat-value">{{ stats()?.byStatus?.FINISHED ?? 0 }}</span>
             <span class="stat-label">Finalizados</span>
           </div>
           <div class="stat-card">
             <div class="stat-icon" style="background: rgba(var(--app-color-secondary-rgb), .14); color: var(--app-color-secondary);">
               <ion-icon name="people-outline"></ion-icon>
             </div>
-            <span class="stat-value">{{ totalPassengers() }}</span>
+            <span class="stat-value">{{ stats()?.passengersTotal ?? 0 }}</span>
             <span class="stat-label">Pasajeros</span>
           </div>
         </div>
@@ -148,10 +148,11 @@ export class DashboardPage implements OnInit {
   STATUS_LABEL = STATUS_LABEL;
   STATUS_COLOR = STATUS_COLOR;
 
-  totalTrips = computed(() => this.trips.trips().length);
-  totalPassengers = computed(() =>
-    this.trips.trips().reduce((sum, t) => sum + t.passengers.length, 0),
-  );
+  // Independiente del filtro de la lista de abajo: siempre refleja los
+  // conteos globales, para que las tarjetas no cambien según el filtro
+  // de estado activo (antes se calculaban sobre `trips.trips()`, que es
+  // justo la lista YA filtrada por el segmento seleccionado).
+  stats = signal<TripStats | null>(null);
 
   constructor(public trips: TripsService, public auth: AuthService) {
     addIcons({
@@ -165,11 +166,14 @@ export class DashboardPage implements OnInit {
   }
 
   async load() {
-    await this.trips.list(1, 50, this.statusFilter() || undefined);
+    await Promise.all([
+      this.trips.list(1, 50, this.statusFilter() || undefined),
+      this.loadStats(),
+    ]);
   }
 
-  countByStatus(status: TripStatus) {
-    return this.trips.trips().filter((t) => t.status === status).length;
+  async loadStats() {
+    this.stats.set(await this.trips.getStats());
   }
 
   avatarBg(status: TripStatus) {

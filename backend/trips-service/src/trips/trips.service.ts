@@ -28,8 +28,22 @@ export class TripsService {
               })),
             }
           : undefined,
+        // El orden de la parada es su posición en el arreglo (1-indexed),
+        // así el recorrido queda origin -> stops[0] -> stops[1] -> ... -> destination.
+        stops: dto.stops?.length
+          ? {
+              create: dto.stops.map((city, index) => ({
+                city,
+                order: index + 1,
+              })),
+            }
+          : undefined,
       },
-      include: { passengers: true, driver: true },
+      include: {
+        passengers: { include: { stop: true } },
+        driver: true,
+        stops: { orderBy: { order: 'asc' } },
+      },
     });
   }
 
@@ -47,7 +61,8 @@ export class TripsService {
         orderBy: { createdAt: 'desc' },
         include: {
           driver: { select: { id: true, name: true, email: true } },
-          passengers: true,
+          passengers: { include: { stop: true } },
+          stops: { orderBy: { order: 'asc' } },
         },
       }),
       this.prisma.trip.count({ where }),
@@ -64,13 +79,44 @@ export class TripsService {
     };
   }
 
+  /**
+   * Conteos agregados para las tarjetas de estadísticas del dashboard.
+   * Se calculan sobre TODA la tabla (o todo lo del conductor, si aplica),
+   * sin importar el filtro/paginación que esté usando la pantalla que
+   * lista los viajes — así las tarjetas no cambian según el filtro activo.
+   */
+  async getStats(driverId?: string) {
+    const where: any = {};
+    if (driverId) where.driverId = driverId;
+
+    const [total, statusGroups, passengersTotal] = await Promise.all([
+      this.prisma.trip.count({ where }),
+      this.prisma.trip.groupBy({ by: ['status'], where, _count: { _all: true } }),
+      this.prisma.passenger.count({
+        where: driverId ? { trip: { driverId } } : undefined,
+      }),
+    ]);
+
+    const byStatus: Record<string, number> = {
+      PENDING: 0,
+      IN_PROGRESS: 0,
+      FINISHED: 0,
+    };
+    for (const group of statusGroups) {
+      byStatus[group.status] = group._count._all;
+    }
+
+    return { total, byStatus, passengersTotal };
+  }
+
   async findOne(id: string) {
     const trip = await this.prisma.trip.findUnique({
       where: { id },
       include: {
         driver: { select: { id: true, name: true, email: true } },
         createdBy: { select: { id: true, name: true, email: true } },
-        passengers: true,
+        passengers: { include: { stop: true } },
+        stops: { orderBy: { order: 'asc' } },
       },
     });
     if (!trip) throw new NotFoundException('Viaje no encontrado');
@@ -97,7 +143,11 @@ export class TripsService {
     return this.prisma.trip.update({
       where: { id },
       data: { signatureData, signedAt: new Date() },
-      include: { driver: true, passengers: true },
+      include: {
+        driver: true,
+        passengers: { include: { stop: true } },
+        stops: { orderBy: { order: 'asc' } },
+      },
     });
   }
 
@@ -111,10 +161,24 @@ export class TripsService {
         'No se puede iniciar el viaje sin la firma digital del despachador/cliente',
       );
     }
+    // Un conductor no puede tener dos viajes EN RUTA al mismo tiempo: debe
+    // cerrar el que tiene en curso antes de iniciar otro.
+    const activeTrip = await this.prisma.trip.findFirst({
+      where: { driverId: trip.driverId, status: TripStatus.IN_PROGRESS },
+    });
+    if (activeTrip) {
+      throw new BadRequestException(
+        `Ya tienes el viaje "${activeTrip.name}" en curso. Debes cerrarlo antes de iniciar otro.`,
+      );
+    }
     return this.prisma.trip.update({
       where: { id },
       data: { status: TripStatus.IN_PROGRESS, startedAt: new Date() },
-      include: { driver: true, passengers: true },
+      include: {
+        driver: true,
+        passengers: { include: { stop: true } },
+        stops: { orderBy: { order: 'asc' } },
+      },
     });
   }
 
@@ -128,7 +192,11 @@ export class TripsService {
     return this.prisma.trip.update({
       where: { id },
       data: { status: TripStatus.FINISHED, finishedAt: new Date() },
-      include: { driver: true, passengers: true },
+      include: {
+        driver: true,
+        passengers: { include: { stop: true } },
+        stops: { orderBy: { order: 'asc' } },
+      },
     });
   }
 
@@ -136,10 +204,26 @@ export class TripsService {
   async getSummary(id: string) {
     const trip = await this.findOne(id);
     const boarded = trip.passengers.filter((p) => p.boardingStatus === 'BOARDED').length;
+    const boardedAtOrigin = trip.passengers.filter(
+      (p) => p.boardingStatus === 'BOARDED' && !p.stopId,
+    ).length;
+    // Desglose de cuántos pasajeros abordaron en cada parada intermedia,
+    // para que el reporte de cierre no solo muestre el total sino de dónde
+    // vino cada uno (origen vs. cada parada).
+    const stopsSummary = trip.stops.map((s) => ({
+      stopId: s.id,
+      city: s.city,
+      order: s.order,
+      boarded: trip.passengers.filter(
+        (p) => p.stopId === s.id && p.boardingStatus === 'BOARDED',
+      ).length,
+    }));
     return {
       trip,
       passengersTotal: trip.passengers.length,
       passengersBoarded: boarded,
+      passengersBoardedAtOrigin: boardedAtOrigin,
+      stopsSummary,
     };
   }
 }

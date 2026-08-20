@@ -10,11 +10,12 @@ import { addIcons } from 'ionicons';
 import {
   personOutline, cashOutline, alertCircleOutline, checkmarkCircleOutline,
   closeCircleOutline, timeOutline, navigateOutline, personCircleOutline,
+  createOutline,
 } from 'ionicons/icons';
 import { TripsService } from '../../../core/services/trips.service';
 import { ExpensesService } from '../../../core/services/expenses.service';
 import { IncidentsService } from '../../../core/services/incidents.service';
-import { Trip, Expense, Incident } from '../../../core/models/models';
+import { Trip, Expense, Incident, Passenger } from '../../../core/models/models';
 
 @Component({
   selector: 'app-trip-detail',
@@ -48,7 +49,9 @@ import { Trip, Expense, Incident } from '../../../core/models/models';
             <h2 class="hero-title">{{ trip()!.name }}</h2>
             <p class="hero-route">
               <ion-icon name="navigate-outline"></ion-icon>
-              {{ trip()!.origin }} → {{ trip()!.destination }}
+              {{ trip()!.origin }}
+              @for (s of trip()!.stops; track s.id) { → {{ s.city }} }
+              → {{ trip()!.destination }}
             </p>
             <p class="hero-driver">
               <ion-icon name="person-circle-outline"></ion-icon>
@@ -72,11 +75,21 @@ import { Trip, Expense, Incident } from '../../../core/models/models';
                   <ion-label>
                     <h3>{{ p.name }}</h3>
                     <p>{{ p.document }}</p>
+                    <p>{{ boardingLabel(p) }}</p>
                   </ion-label>
                 </ion-item>
               }
             </ion-list>
           </div>
+
+          @if (trip()!.signatureData) {
+            <div class="card-surface ion-margin-top">
+              <p class="section-title"><ion-icon name="create-outline"></ion-icon> Firma del despachador/cliente</p>
+              <div class="signature-frame">
+                <img [src]="trip()!.signatureData" alt="Firma digital" />
+              </div>
+            </div>
+          }
 
           <div class="card-surface ion-margin-top">
             <p class="section-title"><ion-icon name="cash-outline"></ion-icon> Gastos reportados</p>
@@ -131,6 +144,15 @@ import { Trip, Expense, Incident } from '../../../core/models/models';
       opacity: 0.95;
       font-size: 0.92rem;
     }
+    .signature-frame {
+      background: #fff;
+      border: 1px solid var(--app-color-border);
+      border-radius: var(--app-radius-md);
+      padding: 10px;
+      display: flex;
+      justify-content: center;
+      img { max-width: 100%; max-height: 160px; }
+    }
   `],
 })
 export class TripDetailPage implements OnInit {
@@ -148,6 +170,7 @@ export class TripDetailPage implements OnInit {
     addIcons({
       personOutline, cashOutline, alertCircleOutline, checkmarkCircleOutline,
       closeCircleOutline, timeOutline, navigateOutline, personCircleOutline,
+      createOutline,
     });
   }
 
@@ -165,6 +188,14 @@ export class TripDetailPage implements OnInit {
     this.trip.set(trip);
     this.expenses.set(expenses);
     this.incidents.set(incidents);
+  }
+
+  boardingLabel(p: Passenger): string {
+    if (p.boardingStatus === 'BOARDED') {
+      return p.stop ? `Abordó en parada: ${p.stop.city}` : 'Abordó en el origen';
+    }
+    if (p.boardingStatus === 'ABSENT') return 'No se presentó';
+    return p.stop ? `Pendiente · sube en parada: ${p.stop.city}` : 'Pendiente en el origen';
   }
 
   statusLabel() {

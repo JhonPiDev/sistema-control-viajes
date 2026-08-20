@@ -16,6 +16,14 @@ export interface LoginResponse {
   user: AuthUser;
 }
 
+export interface Stop {
+  id: string;
+  tripId: string;
+  city: string;
+  order: number;
+  createdAt: string;
+}
+
 export interface Passenger {
   id: string;
   tripId: string;
@@ -23,6 +31,9 @@ export interface Passenger {
   document: string;
   boardingStatus: BoardingStatus;
   checkedAt?: string;
+  // Parada donde abordó. undefined/null = abordó en el origen del viaje.
+  stopId?: string | null;
+  stop?: Stop | null;
 }
 
 export interface Driver {
@@ -48,12 +59,20 @@ export interface Trip {
   driverId: string;
   driver?: Driver;
   passengers: Passenger[];
+  // Paradas intermedias, ya ordenadas (origin -> stops[0] -> ... -> destination).
+  stops: Stop[];
   createdAt: string;
 }
 
 export interface PagedResult<T> {
   data: T[];
   meta: { total: number; page: number; limit: number; totalPages: number };
+}
+
+export interface TripStats {
+  total: number;
+  byStatus: Record<TripStatus, number>;
+  passengersTotal: number;
 }
 
 export interface Expense {
@@ -73,9 +92,22 @@ export interface Incident {
   createdAt: string;
 }
 
+export interface StopSummary {
+  stopId: string;
+  city: string;
+  order: number;
+  boarded: number;
+}
+
 export interface TripReport {
   trip: Partial<Trip>;
-  passengers: { total: number; boarded: number; list: Passenger[] };
+  passengers: {
+    total: number;
+    boarded: number;
+    boardedAtOrigin: number;
+    list: Passenger[];
+    byStop: StopSummary[];
+  };
   expenses: { total: number; count: number };
   incidents: { total: number; list: Incident[] };
   generatedAt: string;

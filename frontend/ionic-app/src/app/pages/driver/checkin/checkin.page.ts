@@ -42,7 +42,7 @@ import { Passenger, BoardingStatus } from '../../../core/models/models';
               <ion-label>
                 <h3>{{ p.name }}</h3>
                 <p>{{ p.document }}</p>
-                <p><strong>{{ label(p.boardingStatus) }}</strong></p>
+                <p><strong>{{ label(p.boardingStatus) }}</strong> · {{ p.stop?.city ? 'Aborda en ' + p.stop!.city : 'Aborda en el origen' }}</p>
               </ion-label>
               <ion-button
                 slot="end" fill="solid" color="success" size="small"

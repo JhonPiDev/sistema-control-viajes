@@ -1,4 +1,4 @@
-import { IsNotEmpty, IsString, IsUUID } from 'class-validator';
+import { IsNotEmpty, IsOptional, IsString, IsUUID } from 'class-validator';
 
 export class CreatePassengerDto {
   @IsUUID()
@@ -11,6 +11,11 @@ export class CreatePassengerDto {
   @IsString()
   @IsNotEmpty()
   document: string;
+
+  // Parada donde aborda. Si no viene, se asume que aborda en el origen.
+  @IsOptional()
+  @IsUUID()
+  stopId?: string;
 }
 
 /** Igual que CreatePassengerDto pero sin tripId, porque en la ruta REST
@@ -23,4 +28,8 @@ export class AddPassengerBodyDto {
   @IsString()
   @IsNotEmpty()
   document: string;
+
+  @IsOptional()
+  @IsUUID()
+  stopId?: string;
 }

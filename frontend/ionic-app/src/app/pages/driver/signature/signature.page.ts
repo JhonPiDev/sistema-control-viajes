@@ -179,7 +179,9 @@ export class SignaturePage implements OnInit, OnDestroy {
       // pegarle al límite de tamaño del body en el gateway.
       const dataUrl = this.pad.toDataURL('image/jpeg', 0.92);
       await this.tripsService.saveSignature(this.tripId, dataUrl);
-      this.router.navigate(['/driver/my-trip']);
+      // Vuelve al detalle de ESTE viaje (no al selector genérico), por si
+      // el conductor tiene varios viajes activos a la vez.
+      this.router.navigate(['/driver/my-trip', this.tripId]);
     } catch (e: any) {
       this.error.set(
         e?.error?.message || 'No se pudo guardar la firma. Intenta de nuevo.',

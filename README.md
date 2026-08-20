@@ -33,8 +33,9 @@ Credenciales de prueba en la sección [4](#4-credenciales-de-prueba-pre-cargadas
                        ┌───────────────────────┐
                        │   Frontend (Ionic +    │
                        │   Angular, standalone) │
-                       │  Admin (web) / Driver  │
-                       │       (móvil)          │
+                       │  Admin → web escritorio│
+                       │  Driver → app Android  │
+                       │  nativa (Capacitor)    │
                        └───────────┬───────────┘
                                    │ HTTPS / REST + JWT
                                    ▼
@@ -93,6 +94,7 @@ Credenciales de prueba en la sección [4](#4-credenciales-de-prueba-pre-cargadas
 | ORM / BD | Prisma + PostgreSQL 16 |
 | Auth | JWT + Passport, Guards de roles (RBAC) |
 | Frontend | Ionic 8 + Angular 18 (standalone components), Signals |
+| App móvil nativa | Capacitor (misma base de código Ionic → APK Android para el rol Conductor) |
 | Firma digital | `signature_pad` sobre `<canvas>` |
 | DevOps | Docker multi-stage, docker-compose, Nginx |
 | Docs API | Swagger (`/api/docs`) |
@@ -263,7 +265,65 @@ npm start   # http://localhost:8100
 
 ---
 
-## 9. Despliegue en producción
+## 9. App móvil nativa del Conductor (Capacitor)
+
+El frontend es una única base de código Ionic + Angular. Como **web de
+escritorio** (Vercel/Docker) sirve tanto al Administrador como, si se
+abre desde un navegador, al Conductor. Pero el rol de Conductor está
+pensado para instalarse como **app móvil nativa** — el mismo código,
+compilado con [Capacitor](https://capacitorjs.com) a un paquete Android
+(o iOS), sin duplicar una sola línea de UI o lógica.
+
+### Requisitos
+
+* [Android Studio](https://developer.android.com/studio) instalado (trae
+  el SDK de Android necesario para compilar).
+* Haber corrido `npm install` en `frontend/ionic-app` (ya incluye
+  `@capacitor/core`, `@capacitor/cli` y `@capacitor/android`).
+
+### Generar y compilar el proyecto Android
+
+La carpeta `android/` **no** está en el repositorio (se regenera; por
+eso está en `.gitignore`, igual que `ios/`). Se crea una sola vez:
+
+```bash
+cd frontend/ionic-app
+
+# 1. Build con la URL del API en producción (el APK es un bundle
+#    estático: no hay contenedor Docker en runtime que le inyecte la URL,
+#    así que hay que pasarla en el build, igual que para Vercel/Netlify).
+API_URL=https://api-gateway-y35g.onrender.com/api npm run build
+
+# 2. Agrega la plataforma Android (solo la primera vez)
+npx cap add android
+
+# 3. Copia el build web dentro del proyecto nativo
+npx cap sync android
+
+# 4. Abre el proyecto en Android Studio para compilar/ejecutar
+npx cap open android
+```
+
+Desde Android Studio: **Run ▶** para probarlo en un emulador o celular
+conectado, o **Build > Generate Signed App Bundle / APK** para generar
+el instalable. Los atajos `npm run cap:sync` y `npm run cap:android`
+(definidos en `package.json`) encadenan los pasos 1, 3 y 4.
+
+Cada vez que cambie el código del frontend, hay que repetir `npm run
+build` + `npx cap sync android` para que el proyecto nativo tome los
+cambios (agregar la plataforma con `cap add` solo se hace una vez).
+
+### CORS para la app nativa
+
+El Gateway ya soporta múltiples orígenes separados por coma en
+`CORS_ORIGIN` (ver `main.ts`). Si al probar la app instalada aparecen
+errores de CORS, agrega el origen que use el WebView de Capacitor en
+Android (`https://localhost`) a esa variable en Render, junto a la URL
+de Vercel: `CORS_ORIGIN=https://sistema-control-viajes.vercel.app,https://localhost`.
+
+---
+
+## 10. Despliegue en producción
 
 Ver [`deploy/DEPLOY.md`](./deploy/DEPLOY.md) para instrucciones paso a
 paso de despliegue en **Render** (backend + PostgreSQL) y
@@ -271,7 +331,7 @@ paso de despliegue en **Render** (backend + PostgreSQL) y
 
 ---
 
-## 10. Estructura del repositorio
+## 11. Estructura del repositorio
 
 ```
 sistema-control-viajes/
@@ -291,7 +351,7 @@ sistema-control-viajes/
 
 ---
 
-## 11. Extras añadidos sobre el alcance mínimo
+## 12. Extras añadidos sobre el alcance mínimo
 
 * Documentación Swagger interactiva.
 * Rate limiting en el Gateway.
@@ -305,3 +365,7 @@ sistema-control-viajes/
   docker-compose.
 * Blueprint de Render (`render.yaml`) listo para desplegar con un clic
   además de la configuración manual documentada.
+* Empaquetado nativo con Capacitor (ver sección 9): el rol Conductor se
+  puede compilar como app Android real desde la misma base de código.
+* Paradas intermedias por viaje (no solo origen/destino), con selector de
+  ciudades con búsqueda y pasajeros asociados a la parada donde abordan.

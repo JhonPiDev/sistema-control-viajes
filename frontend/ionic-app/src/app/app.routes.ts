@@ -54,6 +54,13 @@ export const routes: Routes = [
           import('./pages/driver/my-trip/my-trip.page').then((m) => m.MyTripPage),
       },
       {
+        // Cuando el conductor tiene más de un viaje activo, "my-trip" muestra
+        // un selector y cada item enlaza aquí con el id específico.
+        path: 'my-trip/:id',
+        loadComponent: () =>
+          import('./pages/driver/my-trip/my-trip.page').then((m) => m.MyTripPage),
+      },
+      {
         path: 'checkin/:id',
         loadComponent: () =>
           import('./pages/driver/checkin/checkin.page').then((m) => m.CheckinPage),

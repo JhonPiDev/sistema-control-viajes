@@ -40,6 +40,16 @@ export class TripsController {
     return callService(TRIPS_SERVICE_URL, 'GET', `/trips?${params.toString()}`);
   }
 
+  // Declarado ANTES de ":id" a propósito (mismo motivo que en trips-service):
+  // si no, Nest tomaría "stats" como el :id de la ruta de abajo.
+  @Get('stats')
+  @Roles('ADMIN', 'DRIVER')
+  getStats(@CurrentUser() user: CurrentUserPayload) {
+    const driverId = user.role === 'DRIVER' ? user.id : undefined;
+    const params = driverId ? `?driverId=${driverId}` : '';
+    return callService(TRIPS_SERVICE_URL, 'GET', `/trips/stats${params}`);
+  }
+
   @Get(':id')
   @Roles('ADMIN', 'DRIVER')
   findOne(@Param('id') id: string) {

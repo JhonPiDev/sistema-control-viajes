@@ -2,7 +2,7 @@ import { Injectable, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
 import { ConfigService } from './config.service';
-import { PagedResult, Trip } from '../models/models';
+import { PagedResult, Trip, TripStats } from '../models/models';
 
 /**
  * Gestión de estado global de viajes: expone signals que las
@@ -34,6 +34,15 @@ export class TripsService {
     }
   }
 
+  /**
+   * Conteos agregados (total, por estado, pasajeros) independientes de
+   * cualquier filtro/paginación — para las tarjetas de estadísticas del
+   * dashboard, que no deben cambiar según el filtro de estado activo.
+   */
+  async getStats(): Promise<TripStats> {
+    return firstValueFrom(this.http.get<TripStats>(`${this.base}/stats`));
+  }
+
   async getById(id: string): Promise<Trip> {
     const trip = await firstValueFrom(this.http.get<Trip>(`${this.base}/${id}`));
     this.currentTrip.set(trip);
@@ -46,6 +55,8 @@ export class TripsService {
     destination: string;
     driverId: string;
     passengers?: { name: string; document: string }[];
+    // Paradas intermedias, en orden (origen -> stops -> destino).
+    stops?: string[];
   }): Promise<Trip> {
     return firstValueFrom(this.http.post<Trip>(this.base, payload));
   }

@@ -5,6 +5,7 @@ import { APP_GUARD } from '@nestjs/core';
 import { AuthModule } from './auth/auth.module';
 import { TripsModule } from './trips/trips.module';
 import { PassengersModule } from './passengers/passengers.module';
+import { StopsModule } from './stops/stops.module';
 import { ExpensesModule } from './expenses/expenses.module';
 import { IncidentsModule } from './incidents/incidents.module';
 import { ReportsModule } from './reports/reports.module';
@@ -17,6 +18,7 @@ import { HealthModule } from './health/health.module';
     AuthModule,
     TripsModule,
     PassengersModule,
+    StopsModule,
     ExpensesModule,
     IncidentsModule,
     ReportsModule,

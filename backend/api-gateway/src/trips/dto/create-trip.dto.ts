@@ -1,13 +1,16 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
 import {
+  ArrayMaxSize,
   IsArray,
+  IsIn,
   IsNotEmpty,
   IsOptional,
   IsString,
   IsUUID,
   ValidateNested,
 } from 'class-validator';
+import { CITIES } from '../../common/constants/cities';
 
 class PassengerInputDto {
   @ApiProperty()
@@ -27,14 +30,12 @@ export class CreateTripDto {
   @IsNotEmpty()
   name: string;
 
-  @ApiProperty()
-  @IsString()
-  @IsNotEmpty()
+  @ApiProperty({ enum: CITIES })
+  @IsIn(CITIES)
   origin: string;
 
-  @ApiProperty()
-  @IsString()
-  @IsNotEmpty()
+  @ApiProperty({ enum: CITIES })
+  @IsIn(CITIES)
   destination: string;
 
   @ApiProperty()
@@ -47,4 +48,16 @@ export class CreateTripDto {
   @ValidateNested({ each: true })
   @Type(() => PassengerInputDto)
   passengers?: PassengerInputDto[];
+
+  @ApiProperty({
+    type: [String],
+    enum: CITIES,
+    required: false,
+    description: 'Paradas intermedias, en orden (origen -> stops -> destino).',
+  })
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(10)
+  @IsIn(CITIES, { each: true })
+  stops?: string[];
 }

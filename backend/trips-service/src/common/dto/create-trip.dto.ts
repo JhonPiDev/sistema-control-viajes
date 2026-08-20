@@ -1,12 +1,15 @@
 import { Type } from 'class-transformer';
 import {
+  ArrayMaxSize,
   IsArray,
+  IsIn,
   IsNotEmpty,
   IsOptional,
   IsString,
   IsUUID,
   ValidateNested,
 } from 'class-validator';
+import { CITIES } from '../constants/cities';
 
 class PassengerInputDto {
   @IsString()
@@ -23,12 +26,10 @@ export class CreateTripDto {
   @IsNotEmpty()
   name: string;
 
-  @IsString()
-  @IsNotEmpty()
+  @IsIn(CITIES)
   origin: string;
 
-  @IsString()
-  @IsNotEmpty()
+  @IsIn(CITIES)
   destination: string;
 
   @IsUUID()
@@ -47,4 +48,12 @@ export class CreateTripDto {
   @ValidateNested({ each: true })
   @Type(() => PassengerInputDto)
   passengers?: PassengerInputDto[];
+
+  // Paradas intermedias, en orden (origin -> stops[0] -> ... -> destination).
+  // Se guardan con el mismo orden en que llegan en el arreglo.
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(10)
+  @IsIn(CITIES, { each: true })
+  stops?: string[];
 }

@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsNotEmpty, IsString } from 'class-validator';
+import { IsNotEmpty, IsOptional, IsString, IsUUID } from 'class-validator';
 
 export class CreatePassengerDto {
   @ApiProperty()
@@ -11,4 +11,12 @@ export class CreatePassengerDto {
   @IsString()
   @IsNotEmpty()
   document: string;
+
+  @ApiProperty({
+    required: false,
+    description: 'Parada donde aborda (si no viene, se asume que aborda en el origen).',
+  })
+  @IsOptional()
+  @IsUUID()
+  stopId?: string;
 }

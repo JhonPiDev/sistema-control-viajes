@@ -64,16 +64,38 @@ model Trip {
   updatedAt      DateTime   @updatedAt
 
   passengers Passenger[]
+  stops      Stop[]
 
   @@index([status])
   @@index([driverId])
   @@map("trips")
 }
 
+// Parada intermedia de la ruta (ej. terminal de una ciudad de paso). Se
+// definen ordenadas (origin -> stops[0] -> stops[1] -> ... -> destination)
+// y sirven para poder asociar pasajeros que abordan a mitad de ruta, no
+// solo en el origen.
+model Stop {
+  id        String   @id @default(uuid())
+  tripId    String
+  trip      Trip     @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  city      String
+  order     Int
+  createdAt DateTime @default(now())
+
+  passengers Passenger[]
+
+  @@index([tripId])
+  @@map("stops")
+}
+
 model Passenger {
   id             String         @id @default(uuid())
   tripId         String
   trip           Trip           @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  // Parada donde abordó. Null = abordó en el origen del viaje.
+  stopId         String?
+  stop           Stop?          @relation(fields: [stopId], references: [id], onDelete: SetNull)
   name           String
   document       String
   boardingStatus BoardingStatus @default(PENDING)
@@ -82,5 +104,6 @@ model Passenger {
   updatedAt      DateTime       @updatedAt
 
   @@index([tripId])
+  @@index([stopId])
   @@map("passengers")
 }
