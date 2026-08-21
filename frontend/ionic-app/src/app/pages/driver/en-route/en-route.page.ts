@@ -236,6 +236,12 @@ export class EnRoutePage implements OnInit {
 
   async ngOnInit() {
     this.tripId = this.route.snapshot.paramMap.get('id')!;
+    // Permite entrar directo a una pestaña específica desde Mi Viaje
+    // (ej. "Paradas" o "Gastos y novedades" como accesos separados).
+    const tabParam = this.route.snapshot.queryParamMap.get('tab');
+    if (tabParam === 'stops' || tabParam === 'expenses' || tabParam === 'incidents') {
+      this.tab.set(tabParam);
+    }
     await this.reload();
   }
 

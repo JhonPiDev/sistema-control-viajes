@@ -10,6 +10,7 @@ import { addIcons } from 'ionicons';
 import {
   settingsOutline, peopleOutline, createOutline, playOutline, navigateOutline,
   flagOutline, checkmarkDoneOutline, busOutline, lockClosedOutline, star, checkmarkCircle,
+  locationOutline,
 } from 'ionicons/icons';
 import { TripsService } from '../../../core/services/trips.service';
 import { Trip, TripStatus } from '../../../core/models/models';
@@ -200,7 +201,17 @@ const STATUS_COLOR: Record<TripStatus, string> = {
 
         @if (trip()!.status === 'IN_PROGRESS') {
           <div class="cta-list">
-            <button class="cta-row" [routerLink]="['/driver/en-route', trip()!.id]">
+            <button class="cta-row" [routerLink]="['/driver/en-route', trip()!.id]" [queryParams]="{ tab: 'stops' }">
+              <div class="cta-icon icon-avatar--tertiary">
+                <ion-icon name="location-outline"></ion-icon>
+              </div>
+              <div class="cta-text">
+                <strong>Paradas</strong>
+                <span>Consulta las paradas y quién abordó en cada una</span>
+              </div>
+            </button>
+
+            <button class="cta-row" [routerLink]="['/driver/en-route', trip()!.id]" [queryParams]="{ tab: 'expenses' }">
               <div class="cta-icon" style="background: rgba(245,158,11,.16); color: var(--app-color-warning);">
                 <ion-icon name="flag-outline"></ion-icon>
               </div>
@@ -333,6 +344,7 @@ export class MyTripPage implements OnDestroy {
     addIcons({
       settingsOutline, peopleOutline, createOutline, playOutline, navigateOutline,
       flagOutline, checkmarkDoneOutline, busOutline, lockClosedOutline, star, checkmarkCircle,
+      locationOutline,
     });
   }
 
