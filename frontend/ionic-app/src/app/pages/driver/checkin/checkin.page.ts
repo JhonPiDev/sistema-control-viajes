@@ -135,7 +135,7 @@ export class CheckinPage implements OnInit, OnDestroy {
       await this.showIncompleteAlert();
       return;
     }
-    this.router.navigate(['/driver/my-trip']);
+    this.router.navigate(['/driver/my-trip', this.tripId]);
   }
 
   private async showIncompleteAlert() {
@@ -160,7 +160,7 @@ export class CheckinPage implements OnInit, OnDestroy {
         position: 'top',
       });
       await toast.present();
-      setTimeout(() => this.router.navigate(['/driver/my-trip']), 900);
+      setTimeout(() => this.router.navigate(['/driver/my-trip', this.tripId]), 900);
     }
   }
 }
