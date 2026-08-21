@@ -38,7 +38,7 @@ import { Trip, TripReport, Passenger } from '../../../core/models/models';
           }
         </ion-button>
       } @else {
-        <div class="hero-card">
+        <div class="hero-card hero-card--warm">
           <ion-icon name="checkmark-done-outline" style="font-size:32px;"></ion-icon>
           <h2 class="hero-title">Reporte de {{ report()!.trip.name }}</h2>
           <p class="hero-sub">Viaje cerrado correctamente</p>
@@ -52,21 +52,21 @@ import { Trip, TripReport, Passenger } from '../../../core/models/models';
 
         <div class="stat-grid ion-margin-top">
           <div class="stat-card">
-            <div class="stat-icon" style="background: rgba(var(--app-color-secondary-rgb),.14); color: var(--app-color-secondary);">
+            <div class="stat-icon icon-avatar--tertiary">
               <ion-icon name="people-outline"></ion-icon>
             </div>
             <span class="stat-value">{{ report()!.passengers.boarded }}/{{ report()!.passengers.total }}</span>
             <span class="stat-label">Pasajeros transportados</span>
           </div>
           <div class="stat-card">
-            <div class="stat-icon" style="background: rgba(245,158,11,.14); color: var(--app-color-warning);">
+            <div class="stat-icon icon-avatar--warning">
               <ion-icon name="cash-outline"></ion-icon>
             </div>
             <span class="stat-value">{{ report()!.expenses.total }}</span>
             <span class="stat-label">Total de gastos ({{ report()!.expenses.count }})</span>
           </div>
           <div class="stat-card">
-            <div class="stat-icon" style="background: rgba(var(--app-color-primary-rgb),.12); color: var(--app-color-primary);">
+            <div class="stat-icon icon-avatar--accent">
               <ion-icon name="alert-circle-outline"></ion-icon>
             </div>
             <span class="stat-value">{{ report()!.incidents.total }}</span>

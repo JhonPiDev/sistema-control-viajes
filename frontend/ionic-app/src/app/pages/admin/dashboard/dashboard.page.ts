@@ -80,28 +80,28 @@ const STATUS_COLOR: Record<TripStatus, string> = {
         } @else {
           <div class="stat-grid">
             <div class="stat-card">
-              <div class="stat-icon" style="background: rgba(var(--app-color-primary-rgb), .12); color: var(--app-color-primary);">
+              <div class="stat-icon icon-avatar--primary">
                 <ion-icon name="bus-outline"></ion-icon>
               </div>
               <span class="stat-value">{{ stats()?.total ?? 0 }}</span>
               <span class="stat-label">Viajes totales</span>
             </div>
             <div class="stat-card">
-              <div class="stat-icon" style="background: rgba(245, 158, 11, .14); color: var(--app-color-warning);">
+              <div class="stat-icon icon-avatar--warning">
                 <ion-icon name="time-outline"></ion-icon>
               </div>
               <span class="stat-value">{{ stats()?.byStatus?.IN_PROGRESS ?? 0 }}</span>
               <span class="stat-label">En ruta</span>
             </div>
             <div class="stat-card">
-              <div class="stat-icon" style="background: rgba(22, 163, 74, .14); color: var(--app-color-success);">
+              <div class="stat-icon icon-avatar--success">
                 <ion-icon name="checkmark-done-circle-outline"></ion-icon>
               </div>
               <span class="stat-value">{{ stats()?.byStatus?.FINISHED ?? 0 }}</span>
               <span class="stat-label">Finalizados</span>
             </div>
             <div class="stat-card">
-              <div class="stat-icon" style="background: rgba(var(--app-color-secondary-rgb), .14); color: var(--app-color-secondary);">
+              <div class="stat-icon icon-avatar--accent">
                 <ion-icon name="people-outline"></ion-icon>
               </div>
               <span class="stat-value">{{ stats()?.passengersTotal ?? 0 }}</span>

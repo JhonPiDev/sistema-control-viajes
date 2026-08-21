@@ -33,6 +33,13 @@
   --app-color-danger: #EF4444;
   --app-color-info: #0891B2;
 
+  // Acentos extra para que la app no dependa solo del índigo — se usan en
+  // iconos de tarjetas, avatares y el degradado "cálido" del lado conductor.
+  --app-color-tertiary: #F97316;
+  --app-color-tertiary-rgb: 249, 115, 22;
+  --app-color-accent: #EC4899;
+  --app-color-accent-rgb: 236, 72, 153;
+
   --app-color-background: #F5F6FB;
   --app-color-surface: #FFFFFF;
   --app-color-surface-alt: #EEF0FA;
@@ -41,10 +48,12 @@
   --app-color-text-muted: #666B85;
   --app-color-border: #E5E7F2;
 
-  // Pareja de colores para fondos con degradado (héroes, tarjetas destacadas)
+  // Degradados para fondos destacados (héroes, tarjetas, FAB). El "warm" se
+  // usa del lado conductor para diferenciarlo visualmente del admin.
   --app-gradient-start: #4F46E5;
   --app-gradient-end: #7C3AED;
   --app-gradient: linear-gradient(135deg, var(--app-gradient-start) 0%, var(--app-gradient-end) 100%);
+  --app-gradient-warm: linear-gradient(135deg, #F97316 0%, #EC4899 100%);
 
   // ---- Tokens de espaciado ----
   --app-space-xs: 4px;
@@ -89,6 +98,13 @@
   --ion-color-success: var(--app-color-success);
   --ion-color-warning: var(--app-color-warning);
   --ion-color-danger: var(--app-color-danger);
+
+  --ion-color-tertiary: var(--app-color-tertiary);
+  --ion-color-tertiary-rgb: var(--app-color-tertiary-rgb);
+  --ion-color-tertiary-contrast: #ffffff;
+  --ion-color-tertiary-contrast-rgb: 255, 255, 255;
+  --ion-color-tertiary-shade: #DB6812;
+  --ion-color-tertiary-tint: #FA8B41;
 
   --ion-background-color: var(--app-color-background);
   --ion-text-color: var(--app-color-text);

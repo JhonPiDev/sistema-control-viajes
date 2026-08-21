@@ -66,6 +66,9 @@ import { Expense, ExpenseType, Incident, IncidentType, Passenger, Trip } from '.
             <ion-list class="list-cards">
               @for (s of trip()!.stops; track s.id) {
                 <ion-item lines="none" class="stop-item">
+                  <div slot="start" class="icon-avatar icon-avatar--tertiary">
+                    <ion-icon name="location-outline"></ion-icon>
+                  </div>
                   <ion-label>
                     <p class="stop-order">Parada {{ s.order }}</p>
                     <h3>{{ s.city }}</h3>
@@ -137,6 +140,9 @@ import { Expense, ExpenseType, Incident, IncidentType, Passenger, Trip } from '.
           <ion-list class="list-cards">
             @for (e of expenses(); track e.id) {
               <ion-item lines="none">
+                <div slot="start" class="icon-avatar icon-avatar--warning">
+                  <ion-icon name="cash-outline"></ion-icon>
+                </div>
                 <ion-label><h3>{{ e.concept }}</h3><p>{{ e.type }}</p></ion-label>
                 <ion-badge slot="end" color="warning">{{ e.amount }}</ion-badge>
               </ion-item>
@@ -170,6 +176,9 @@ import { Expense, ExpenseType, Incident, IncidentType, Passenger, Trip } from '.
           <ion-list class="list-cards">
             @for (n of incidents(); track n.id) {
               <ion-item lines="none">
+                <div slot="start" class="icon-avatar icon-avatar--danger">
+                  <ion-icon name="alert-circle-outline"></ion-icon>
+                </div>
                 <ion-label><h3>{{ n.type }}</h3><p>{{ n.description }}</p></ion-label>
               </ion-item>
             }

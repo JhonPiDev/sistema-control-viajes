@@ -9,7 +9,7 @@ import {
 import { addIcons } from 'ionicons';
 import {
   settingsOutline, peopleOutline, createOutline, playOutline, navigateOutline,
-  flagOutline, checkmarkDoneOutline, busOutline, lockClosedOutline, star,
+  flagOutline, checkmarkDoneOutline, busOutline, lockClosedOutline, star, checkmarkCircle,
 } from 'ionicons/icons';
 import { TripsService } from '../../../core/services/trips.service';
 import { Trip, TripStatus } from '../../../core/models/models';
@@ -84,7 +84,7 @@ const STATUS_COLOR: Record<TripStatus, string> = {
             ← Ver mis {{ chooser().length }} viajes
           </ion-button>
         }
-        <div class="hero-card">
+        <div class="hero-card hero-card--warm">
           <ion-badge style="--background:rgba(255,255,255,.2); color:#fff;">
             {{ trip()!.status === 'PENDING' ? 'Por iniciar' : 'En ruta' }}
           </ion-badge>
@@ -131,25 +131,38 @@ const STATUS_COLOR: Record<TripStatus, string> = {
         @if (trip()!.status === 'PENDING') {
           <div class="cta-list">
             <button class="cta-row" [routerLink]="['/driver/checkin', trip()!.id]">
-              <div class="cta-icon" style="background: rgba(var(--app-color-primary-rgb),.12); color: var(--app-color-primary);">
+              <div class="cta-icon icon-avatar--tertiary">
                 <ion-icon name="people-outline"></ion-icon>
               </div>
               <div class="cta-text">
                 <strong>Check-in de pasajeros</strong>
-                <span>Marca quién abordó el vehículo</span>
+                <span>{{ checkinComplete() ? 'Todos los pasajeros marcados' : 'Marca quién abordó el vehículo' }}</span>
               </div>
+              @if (checkinComplete()) {
+                <ion-icon name="checkmark-circle" class="cta-check"></ion-icon>
+              }
             </button>
 
             <button class="cta-row" [routerLink]="['/driver/signature', trip()!.id]">
-              <div class="cta-icon" style="background: rgba(var(--app-color-secondary-rgb),.14); color: var(--app-color-secondary);">
+              <div class="cta-icon icon-avatar--accent">
                 <ion-icon name="create-outline"></ion-icon>
               </div>
               <div class="cta-text">
-                <strong>{{ trip()!.signatureData ? 'Firma capturada ✓' : 'Capturar firma digital' }}</strong>
+                <strong>{{ trip()!.signatureData ? 'Firma capturada' : 'Capturar firma digital' }}</strong>
                 <span>{{ trip()!.signatureData ? 'Toca para ver o volver a firmar' : 'Requerida para iniciar el viaje' }}</span>
               </div>
+              @if (hasSignature()) {
+                <ion-icon name="checkmark-circle" class="cta-check"></ion-icon>
+              }
             </button>
           </div>
+
+          @if (checkinComplete() && hasSignature()) {
+            <div class="ready-banner">
+              <ion-icon name="checkmark-circle"></ion-icon>
+              <span>Todo listo: check-in y firma completos. Ya puedes iniciar el viaje.</span>
+            </div>
+          }
 
           <ion-button
             expand="block"
@@ -259,8 +272,26 @@ const STATUS_COLOR: Record<TripStatus, string> = {
       display: flex; align-items: center; justify-content: center;
       font-size: 20px;
     }
-    .cta-text { display: flex; flex-direction: column; }
+    .cta-text { display: flex; flex-direction: column; flex: 1; min-width: 0; }
     .cta-text strong { color: var(--app-color-text); font-size: 0.95rem; }
+    .cta-check {
+      flex-shrink: 0;
+      font-size: 22px;
+      color: var(--app-color-success);
+    }
+    .ready-banner {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: var(--app-space-md);
+      padding: 12px 14px;
+      border-radius: var(--app-radius-md);
+      background: rgba(22, 163, 74, .12);
+      color: var(--app-color-success);
+      font-weight: 700;
+      font-size: 0.85rem;
+      ion-icon { font-size: 20px; flex-shrink: 0; }
+    }
     .cta-text span { color: var(--app-color-text-muted); font-size: 0.78rem; margin-top: 2px; }
     .lock-hint {
       display: flex; align-items: center; gap: 6px;
@@ -301,7 +332,7 @@ export class MyTripPage implements OnDestroy {
   ) {
     addIcons({
       settingsOutline, peopleOutline, createOutline, playOutline, navigateOutline,
-      flagOutline, checkmarkDoneOutline, busOutline, lockClosedOutline, star,
+      flagOutline, checkmarkDoneOutline, busOutline, lockClosedOutline, star, checkmarkCircle,
     });
   }
 
@@ -402,6 +433,12 @@ export class MyTripPage implements OnDestroy {
 
   hasSignature() {
     return !!this.trip()?.signatureData;
+  }
+
+  /** Check-in del origen completo: todos los pasajeros ya quedaron abordados o ausentes (ninguno pendiente). */
+  checkinComplete(): boolean {
+    const passengers = this.trip()?.passengers || [];
+    return passengers.every((p) => p.boardingStatus !== 'PENDING');
   }
 
   isInProgress() {

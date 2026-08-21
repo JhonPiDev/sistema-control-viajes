@@ -119,6 +119,56 @@ ion-content .content-fade {
   }
 }
 
+/* Variante cálida (naranja/rosa) para diferenciar visualmente el lado
+   conductor del lado admin (que usa el degradado índigo/violeta). */
+.hero-card--warm {
+  background: var(--app-gradient-warm);
+  box-shadow: 0 20px 45px rgba(var(--app-color-tertiary-rgb), 0.28), 0 6px 14px rgba(var(--app-color-accent-rgb), 0.14);
+}
+
+/* Círculo de icono con fondo de color — para avatares de listas (pasajero,
+   parada, gasto...) en vez de un simple ion-icon plano. */
+.icon-avatar {
+  width: 40px;
+  height: 40px;
+  flex-shrink: 0;
+  border-radius: var(--app-radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 19px;
+  &--primary { background: rgba(var(--app-color-primary-rgb), .14); color: var(--app-color-primary); }
+  &--secondary { background: rgba(var(--app-color-secondary-rgb), .14); color: var(--app-color-secondary); }
+  &--tertiary { background: rgba(var(--app-color-tertiary-rgb), .16); color: var(--app-color-tertiary); }
+  &--accent { background: rgba(var(--app-color-accent-rgb), .16); color: var(--app-color-accent); }
+  &--success { background: rgba(22, 163, 74, .14); color: var(--app-color-success); }
+  &--warning { background: rgba(245, 158, 11, .16); color: var(--app-color-warning); }
+  &--danger { background: rgba(239, 68, 68, .14); color: var(--app-color-danger); }
+  &--medium { background: var(--app-color-surface-alt); color: var(--app-color-text-muted); }
+}
+
+/* Fila de chips de resumen coloridos (ej. contador de abordaron/ausentes) */
+.stat-chip-row {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: var(--app-space-md);
+}
+.stat-chip {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border-radius: var(--app-radius-full);
+  font-weight: 700;
+  font-size: 0.82rem;
+  ion-icon { font-size: 15px; }
+  &--success { background: rgba(22, 163, 74, .14); color: var(--app-color-success); }
+  &--danger { background: rgba(239, 68, 68, .14); color: var(--app-color-danger); }
+  &--medium { background: var(--app-color-surface-alt); color: var(--app-color-text-muted); }
+  &--tertiary { background: rgba(var(--app-color-tertiary-rgb), .16); color: var(--app-color-tertiary); }
+}
+
 /* Grid de tarjetas estadísticas (dashboard admin) */
 .stat-grid {
   display: grid;
@@ -135,6 +185,9 @@ ion-content .content-fade {
   display: flex;
   flex-direction: column;
   gap: 4px;
+  transition: transform var(--app-transition-base), box-shadow var(--app-transition-base);
+
+  &:hover { transform: translateY(-2px); box-shadow: var(--app-shadow-md); }
 
   .stat-value {
     font-family: var(--app-font-family-heading);
@@ -149,13 +202,13 @@ ion-content .content-fade {
     font-weight: 500;
   }
   .stat-icon {
-    width: 36px;
-    height: 36px;
+    width: 38px;
+    height: 38px;
     border-radius: var(--app-radius-sm);
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 18px;
+    font-size: 19px;
     margin-bottom: 6px;
   }
 }
@@ -174,7 +227,22 @@ ion-button[fill='solid']:not([color]) {
   --box-shadow: var(--app-shadow-primary);
 }
 ion-fab-button {
-  --box-shadow: var(--app-shadow-lg);
+  --background: var(--app-gradient);
+  --background-activated: var(--app-gradient);
+  --box-shadow: var(--app-shadow-primary);
+}
+
+/* Botón de volver: chip circular con el color de marca en vez del texto
+   plano por defecto de Ionic — más visible y consistente en toda la app. */
+ion-back-button {
+  --color: var(--app-color-primary);
+  --icon-font-size: 22px;
+  --min-height: 36px;
+  --padding-start: 6px;
+  --padding-end: 6px;
+  --border-radius: var(--app-radius-full);
+  --background-hover: rgba(var(--app-color-primary-rgb), .1);
+  --background-focused: rgba(var(--app-color-primary-rgb), .12);
 }
 
 /* ============================================================

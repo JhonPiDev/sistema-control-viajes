@@ -74,11 +74,9 @@ import { Trip, Expense, Incident, Passenger } from '../../../core/models/models'
             <ion-list class="list-cards">
               @for (p of trip()!.passengers; track p.id) {
                 <ion-item lines="none">
-                  <ion-icon
-                    slot="start"
-                    [name]="p.boardingStatus === 'BOARDED' ? 'checkmark-circle-outline' : p.boardingStatus === 'ABSENT' ? 'close-circle-outline' : 'time-outline'"
-                    [color]="p.boardingStatus === 'BOARDED' ? 'success' : p.boardingStatus === 'ABSENT' ? 'danger' : 'medium'">
-                  </ion-icon>
+                  <div slot="start" class="icon-avatar" [class]="'icon-avatar--' + (p.boardingStatus === 'BOARDED' ? 'success' : p.boardingStatus === 'ABSENT' ? 'danger' : 'medium')">
+                    <ion-icon [name]="p.boardingStatus === 'BOARDED' ? 'checkmark-circle-outline' : p.boardingStatus === 'ABSENT' ? 'close-circle-outline' : 'time-outline'"></ion-icon>
+                  </div>
                   <ion-label>
                     <h3>{{ p.name }}</h3>
                     <p>{{ p.document }}</p>
@@ -106,6 +104,9 @@ import { Trip, Expense, Incident, Passenger } from '../../../core/models/models'
               <ion-list class="list-cards">
                 @for (e of expenses(); track e.id) {
                   <ion-item lines="none">
+                    <div slot="start" class="icon-avatar icon-avatar--warning">
+                      <ion-icon name="cash-outline"></ion-icon>
+                    </div>
                     <ion-label>
                       <h3>{{ e.concept }}</h3>
                       <p>{{ e.type }}</p>
@@ -125,6 +126,9 @@ import { Trip, Expense, Incident, Passenger } from '../../../core/models/models'
               <ion-list class="list-cards">
                 @for (n of incidents(); track n.id) {
                   <ion-item lines="none">
+                    <div slot="start" class="icon-avatar icon-avatar--danger">
+                      <ion-icon name="alert-circle-outline"></ion-icon>
+                    </div>
                     <ion-label>
                       <h3>{{ n.type }}</h3>
                       <p>{{ n.description }}</p>
