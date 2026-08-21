@@ -10,7 +10,7 @@
     "watch": "ng build --watch --configuration development",
     "cap:sync": "npm run build && npx cap sync",
     "cap:android": "npm run build && npx cap sync android && npx cap open android",
-    "cap:assets": "npx capacitor-assets generate --android --iconBackgroundColor '#4F46E5' --iconBackgroundColorDark '#0A0C16' --splashBackgroundColor '#4F46E5' --splashBackgroundColorDark '#0A0C16' && node scripts/fix-android-icons.js"
+    "cap:assets": "npx capacitor-assets generate --android --iconBackgroundColor \"#4F46E5\" --iconBackgroundColorDark \"#0A0C16\" --splashBackgroundColor \"#4F46E5\" --splashBackgroundColorDark \"#0A0C16\" && node scripts/fix-android-icons.js"
   },
   "dependencies": {
     "@angular/animations": "^18.2.0",
