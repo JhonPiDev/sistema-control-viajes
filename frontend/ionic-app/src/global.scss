@@ -565,14 +565,18 @@ ion-chip {
 .phone-shell-wrap {
   min-height: 100%;
   display: flex;
-  justify-content: center;
+  box-sizing: border-box;
   padding: var(--app-space-lg) var(--app-space-md);
 }
 .phone-shell {
   width: 100%;
   max-width: 430px;
-  margin: 0 auto;
   height: fit-content;
+  /* `margin:auto` centra en ambos ejes y, a diferencia de
+     `align-items:center`, NO recorta el borde superior cuando el
+     contenido es más alto que la pantalla: ahí simplemente se apoya
+     arriba y la página hace scroll con normalidad. */
+  margin: auto;
   background: var(--app-color-surface);
   border: 1px solid var(--app-color-border);
   border-radius: var(--app-radius-xl);
