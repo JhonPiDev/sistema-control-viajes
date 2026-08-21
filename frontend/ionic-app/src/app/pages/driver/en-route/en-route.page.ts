@@ -15,7 +15,9 @@ import { TripsService } from '../../../core/services/trips.service';
 import { Expense, ExpenseType, Incident, IncidentType, Passenger, Trip } from '../../../core/models/models';
 import { PhoneShellComponent } from '../../../shared/components/phone-shell.component';
 import { EmptyStateComponent } from '../../../shared/components/empty-state.component';
+import { InputFilterDirective } from '../../../shared/directives/input-filter.directive';
 import { MoneyPipe } from '../../../shared/pipes/money.pipe';
+import { parseAmount } from '../../../shared/utils/parse-amount';
 
 const EXPENSE_TYPE_LABEL: Record<ExpenseType, string> = {
   FUEL: 'Combustible extra',
@@ -36,7 +38,7 @@ const INCIDENT_TYPE_LABEL: Record<IncidentType, string> = {
   standalone: true,
   imports: [
     CommonModule, FormsModule, IonContent, IonIcon, IonSpinner,
-    PhoneShellComponent, EmptyStateComponent, MoneyPipe,
+    PhoneShellComponent, EmptyStateComponent, MoneyPipe, InputFilterDirective,
   ],
   template: `
     <ion-content>
@@ -78,9 +80,11 @@ const INCIDENT_TYPE_LABEL: Record<IncidentType, string> = {
                 <div class="card-surface add-passenger-form">
                   <label class="field-label">Nombre</label>
                   <input class="field-control field-gap" placeholder="Nombre del pasajero"
+                    appOnly="letters" [maxLength]="60"
                     [(ngModel)]="newPassengerName" [name]="'name-'+s.id" />
                   <label class="field-label">Documento</label>
                   <input class="field-control field-gap" placeholder="Número de documento"
+                    appOnly="digits" [maxLength]="15"
                     [(ngModel)]="newPassengerDocument" [name]="'doc-'+s.id" />
                   @if (addError()) {
                     <p class="field-error">{{ addError() }}</p>
@@ -105,10 +109,25 @@ const INCIDENT_TYPE_LABEL: Record<IncidentType, string> = {
             <option value="OTHER">Otro</option>
           </select>
           <label class="field-label" for="expense-amount">Monto</label>
-          <input id="expense-amount" class="field-control field-gap" type="number" placeholder="$ 0" [(ngModel)]="expenseAmount" />
+          <!-- type="text" + filtro: con type="number" Android deja escribir
+               "e", "+" y "-", y al pegar texto el valor se vacía en silencio. -->
+          <input id="expense-amount" class="field-control" type="text"
+            appOnly="decimal" [maxLength]="14" placeholder="$ 0" [(ngModel)]="expenseAmount" />
+          <!-- "1.500,75" es ambiguo al teclearlo; mostrar el importe ya
+               interpretado evita que se guarde un número distinto del que
+               el conductor cree estar escribiendo. -->
+          @if (parsedAmount(); as amount) {
+            <p class="amount-preview">Se registrará {{ amount | money }}</p>
+          } @else {
+            <div class="field-gap"></div>
+          }
           <label class="field-label" for="expense-concept">Concepto</label>
-          <input id="expense-concept" class="field-control field-gap" placeholder="Ej. tanqueo en Ibagué" [(ngModel)]="expenseConcept" />
-          <button type="button" class="btn btn--primary btn--block" (click)="addExpense()" [disabled]="saving()">
+          <input id="expense-concept" class="field-control field-gap" [maxlength]="80"
+            placeholder="Ej. tanqueo en Ibagué" [(ngModel)]="expenseConcept" />
+          @if (expenseError(); as msg) {
+            <p class="field-error">{{ msg }}</p>
+          }
+          <button type="button" class="btn btn--primary btn--block" (click)="addExpense()" [disabled]="saving() || !expenseIsValid()">
             Registrar gasto
           </button>
         </div>
@@ -140,8 +159,12 @@ const INCIDENT_TYPE_LABEL: Record<IncidentType, string> = {
           </select>
           <label class="field-label" for="incident-desc">Descripción</label>
           <textarea id="incident-desc" class="field-control field-gap" rows="3"
-            placeholder="Describe lo ocurrido" [(ngModel)]="incidentDescription"></textarea>
-          <button type="button" class="btn btn--primary btn--block" (click)="addIncident()" [disabled]="saving()">
+            placeholder="Describe lo ocurrido" [maxlength]="300"
+            [(ngModel)]="incidentDescription"></textarea>
+          @if (incidentDescription.trim() && !incidentIsValid()) {
+            <p class="field-error">Describe la novedad con al menos 5 caracteres.</p>
+          }
+          <button type="button" class="btn btn--primary btn--block" (click)="addIncident()" [disabled]="saving() || !incidentIsValid()">
             Registrar novedad
           </button>
         </div>
@@ -199,6 +222,12 @@ const INCIDENT_TYPE_LABEL: Record<IncidentType, string> = {
       strong { color: var(--app-color-text); }
     }
     .field-gap { margin-bottom: 12px; }
+    .amount-preview {
+      font-size: 0.76rem;
+      font-weight: 600;
+      color: var(--app-color-secondary);
+      margin: 6px 0 12px;
+    }
     .form-card { margin-bottom: 18px; }
 
     /* Fila de parada (mockup: icono + textos + botón "Agregar") */
@@ -240,7 +269,8 @@ export class EnRoutePage implements OnInit {
   addError = signal<string | null>(null);
 
   expenseType: ExpenseType = 'FUEL';
-  expenseAmount: number | null = null;
+  /** Texto, no número: el campo filtra los caracteres y aquí se convierte. */
+  expenseAmount = '';
   expenseConcept = '';
 
   incidentType: IncidentType = 'DELAY';
@@ -307,8 +337,18 @@ export class EnRoutePage implements OnInit {
 
   async addPassengerAtStop(stopId: string) {
     this.addError.set(null);
-    if (!this.newPassengerName.trim() || !this.newPassengerDocument.trim()) {
+    const name = this.newPassengerName.trim();
+    const doc = this.newPassengerDocument.trim();
+    if (!name || !doc) {
       this.addError.set('Completa el nombre y el documento del pasajero.');
+      return;
+    }
+    if (name.replace(/[^\p{L}]/gu, '').length < 3) {
+      this.addError.set('El nombre es demasiado corto.');
+      return;
+    }
+    if (doc.length < 5) {
+      this.addError.set('El documento debe tener al menos 5 dígitos.');
       return;
     }
     this.addingPassenger.set(true);
@@ -327,14 +367,35 @@ export class EnRoutePage implements OnInit {
     }
   }
 
+  /** Importe interpretado del campo, o null si no es utilizable. */
+  parsedAmount(): number | null {
+    return parseAmount(this.expenseAmount);
+  }
+
+  /** Mensaje del formulario de gasto, o null si está listo para enviar. */
+  expenseError(): string | null {
+    const hasAmount = this.expenseAmount.trim().length > 0;
+    const hasConcept = this.expenseConcept.trim().length > 0;
+    if (!hasAmount && !hasConcept) return null;
+    if (hasAmount && this.parsedAmount() === null) return 'El monto debe ser mayor que cero.';
+    if (!hasAmount) return 'Falta el monto del gasto.';
+    if (!hasConcept) return 'Falta el concepto del gasto.';
+    return null;
+  }
+
+  expenseIsValid(): boolean {
+    return this.parsedAmount() !== null && this.expenseConcept.trim().length > 0;
+  }
+
   async addExpense() {
-    if (!this.expenseAmount || !this.expenseConcept) return;
+    const amount = this.parsedAmount();
+    if (amount === null || !this.expenseConcept.trim()) return;
     this.saving.set(true);
     try {
       await this.expensesService.create(
-        this.tripId, this.expenseType, this.expenseAmount, this.expenseConcept,
+        this.tripId, this.expenseType, amount, this.expenseConcept.trim(),
       );
-      this.expenseAmount = null;
+      this.expenseAmount = '';
       this.expenseConcept = '';
       await this.reload();
     } finally {
@@ -342,11 +403,17 @@ export class EnRoutePage implements OnInit {
     }
   }
 
+  incidentIsValid(): boolean {
+    return this.incidentDescription.trim().length >= 5;
+  }
+
   async addIncident() {
-    if (!this.incidentDescription) return;
+    if (!this.incidentIsValid()) return;
     this.saving.set(true);
     try {
-      await this.incidentsService.create(this.tripId, this.incidentType, this.incidentDescription);
+      await this.incidentsService.create(
+        this.tripId, this.incidentType, this.incidentDescription.trim(),
+      );
       this.incidentDescription = '';
       await this.reload();
     } finally {

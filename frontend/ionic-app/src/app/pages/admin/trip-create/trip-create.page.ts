@@ -15,6 +15,7 @@ import { Driver } from '../../../core/models/models';
 import { CityPickerComponent } from '../../../shared/components/city-picker.component';
 import { AdminPageComponent } from '../../../shared/components/admin-page.component';
 import { EmptyStateComponent } from '../../../shared/components/empty-state.component';
+import { InputFilterDirective } from '../../../shared/directives/input-filter.directive';
 
 interface PassengerRow { name: string; document: string; }
 
@@ -23,7 +24,7 @@ interface PassengerRow { name: string; document: string; }
   standalone: true,
   imports: [
     CommonModule, FormsModule, RouterLink, IonContent, IonIcon, IonSpinner,
-    AdminPageComponent, EmptyStateComponent,
+    AdminPageComponent, EmptyStateComponent, InputFilterDirective,
   ],
   template: `
     <ion-content>
@@ -97,12 +98,17 @@ interface PassengerRow { name: string; document: string; }
               <p class="card-title section-gap">Lista de pasajeros</p>
               @for (p of passengers(); track $index) {
                 <div class="field-row">
-                  <input class="field-control" placeholder="Nombre" [(ngModel)]="p.name" [name]="'pname'+$index" />
-                  <input class="field-control" placeholder="Documento" [(ngModel)]="p.document" [name]="'pdoc'+$index" />
+                  <input class="field-control" placeholder="Nombre" appOnly="letters" [maxLength]="60"
+                    [(ngModel)]="p.name" [name]="'pname'+$index" />
+                  <input class="field-control" placeholder="Documento" appOnly="digits" [maxLength]="15"
+                    [(ngModel)]="p.document" [name]="'pdoc'+$index" />
                   <button type="button" class="btn btn--icon" (click)="removePassenger($index)" aria-label="Quitar pasajero">
                     <ion-icon name="close-outline"></ion-icon>
                   </button>
                 </div>
+                @if (passengerRowError(p); as msg) {
+                  <p class="field-error row-error">{{ msg }}</p>
+                }
               }
               <button type="button" class="btn btn--outline" (click)="addPassenger()">
                 <ion-icon name="add-circle-outline"></ion-icon>
@@ -180,6 +186,7 @@ interface PassengerRow { name: string; document: string; }
     .edit-note { margin: 0 0 18px; }
     .blocked-msg { font-size: 0.9rem; margin: 0 0 var(--app-space-md); }
 
+    .row-error { margin: -6px 0 10px; }
     .form-actions {
       display: flex;
       justify-content: flex-end;
@@ -282,10 +289,34 @@ export class TripCreatePage implements OnInit {
     this.passengers.update((list) => list.filter((_, i) => i !== index));
   }
 
+  /**
+   * Error de una fila de pasajero, o null si está bien. Una fila vacía es
+   * válida (simplemente no se envía); lo que no vale es dejarla a medias,
+   * porque antes se descartaba en silencio y el pasajero no se creaba.
+   */
+  passengerRowError(p: PassengerRow): string | null {
+    const name = p.name.trim();
+    const doc = p.document.trim();
+    if (!name && !doc) return null;
+    if (!name) return 'Falta el nombre de este pasajero.';
+    if (!doc) return 'Falta el documento de este pasajero.';
+    if (name.replace(/[^\p{L}]/gu, '').length < 3) return 'El nombre es demasiado corto.';
+    if (doc.length < 5) return 'El documento debe tener al menos 5 dígitos.';
+    return null;
+  }
+
   async submit() {
     this.error.set(null);
     if (!this.origin || !this.destination || !this.driverId) {
       this.error.set('Completa todos los campos obligatorios');
+      return;
+    }
+    if (this.origin === this.destination) {
+      this.error.set('El origen y el destino no pueden ser la misma ciudad.');
+      return;
+    }
+    if (this.passengers().some((p) => this.passengerRowError(p))) {
+      this.error.set('Revisa los datos de los pasajeros marcados.');
       return;
     }
     this.saving.set(true);

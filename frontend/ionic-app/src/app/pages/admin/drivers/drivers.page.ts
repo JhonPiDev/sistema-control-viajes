@@ -13,13 +13,14 @@ import { DriversService } from '../../../core/services/drivers.service';
 import { CreatedDriver, Driver } from '../../../core/models/models';
 import { AdminPageComponent } from '../../../shared/components/admin-page.component';
 import { EmptyStateComponent } from '../../../shared/components/empty-state.component';
+import { InputFilterDirective } from '../../../shared/directives/input-filter.directive';
 
 @Component({
   selector: 'app-drivers',
   standalone: true,
   imports: [
     CommonModule, FormsModule, IonContent, IonButton, IonIcon, IonSpinner,
-    AdminPageComponent, EmptyStateComponent,
+    AdminPageComponent, EmptyStateComponent, InputFilterDirective,
   ],
   template: `
     <ion-content>
@@ -39,16 +40,21 @@ import { EmptyStateComponent } from '../../../shared/components/empty-state.comp
             <input
               id="driver-name"
               class="field-control"
+              appOnly="letters"
+              [maxLength]="60"
               [(ngModel)]="name"
               name="name"
               required
               placeholder="Ej. Carlos Ramírez" />
+            @if (name.trim() && !nameIsValid()) {
+              <p class="field-error">Escribe nombre y apellido (solo letras).</p>
+            }
 
             @if (error()) {
               <p class="field-error">{{ error() }}</p>
             }
 
-            <button type="submit" class="btn btn--primary btn--block submit-btn" [disabled]="saving() || !name.trim()">
+            <button type="submit" class="btn btn--primary btn--block submit-btn" [disabled]="saving() || !nameIsValid()">
               @if (saving()) { <ion-spinner name="dots"></ion-spinner> } @else {
                 Crear conductor
               }
@@ -182,6 +188,16 @@ export class DriversPage implements OnInit {
 
   copy(text: string) {
     navigator.clipboard?.writeText(text);
+  }
+
+  /**
+   * Un nombre válido son al menos dos palabras de 2+ letras: el backend
+   * deriva el correo y la contraseña a partir de él, así que un "a" o un
+   * "juan" suelto generaría credenciales inservibles.
+   */
+  nameIsValid(): boolean {
+    const parts = this.name.trim().split(/\s+/).filter(Boolean);
+    return parts.length >= 2 && parts.every((p) => p.replace(/[^\p{L}]/gu, '').length >= 2);
   }
 
   /** Iniciales para el avatar circular de la lista (máx. 2 letras). */
