@@ -297,6 +297,11 @@ API_URL=https://api-gateway-y35g.onrender.com/api npm run build
 # 2. Agrega la plataforma Android (solo la primera vez)
 npx cap add android
 
+# 2.5 Genera el ícono y el splash screen a partir de assets/icon.png (ver
+#     abajo "Ícono y nombre de la app"; solo hace falta repetirlo si se
+#     cambia esa imagen, no en cada build)
+npm run cap:assets
+
 # 3. Copia el build web dentro del proyecto nativo
 npx cap sync android
 
@@ -312,6 +317,38 @@ el instalable. Los atajos `npm run cap:sync` y `npm run cap:android`
 Cada vez que cambie el código del frontend, hay que repetir `npm run
 build` + `npx cap sync android` para que el proyecto nativo tome los
 cambios (agregar la plataforma con `cap add` solo se hace una vez).
+
+### Ícono y nombre de la app
+
+El ícono (un bus, ver `assets/icon.png`) y el splash screen se generan
+con [`@capacitor/assets`](https://github.com/ionic-team/capacitor-assets)
+a partir de esa única imagen fuente:
+
+```bash
+npm run cap:assets
+```
+
+Ese comando encadena `capacitor-assets generate` (que crea el ícono
+adaptativo de Android 8+ y el splash en todas las densidades) con
+`node scripts/fix-android-icons.js`, un script propio que corrige un bug
+conocido de la herramienta: los PNG "legacy" (`ic_launcher.png` /
+`ic_launcher_round.png`, para launchers viejos sin soporte de íconos
+adaptativos) quedan con el fondo transparente en vez de con el color de
+marca. El script compone a mano el fondo + el bus y recorta el círculo
+del ícono redondo. Solo hace falta correrlo después de `npx cap add
+android` (o si se reemplaza `assets/icon.png` por otro diseño) — no en
+cada build.
+
+Para cambiar el ícono: reemplaza `assets/icon.png` (1024×1024, con
+transparencia) y vuelve a correr `npm run cap:assets`.
+
+Para cambiar el **nombre** de la app (actualmente "Control de Viajes"),
+edita `appName` en `capacitor.config.ts`. Ese valor solo se escribe en
+el proyecto nativo en el momento de `npx cap add android`, así que si
+`android/` ya existe hay que borrarla y volver a crearla (`rm -rf
+android && npx cap add android && npm run cap:assets`) — o, más rápido,
+editar directamente `android/app/src/main/res/values/strings.xml` y
+cambiar el valor de `app_name`.
 
 ### CORS para la app nativa
 
