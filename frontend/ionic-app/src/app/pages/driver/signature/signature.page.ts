@@ -17,7 +17,7 @@ import { PhoneShellComponent } from '../../../shared/components/phone-shell.comp
   imports: [CommonModule, IonContent, IonIcon, IonSpinner, PhoneShellComponent],
   template: `
     <ion-content>
-      <app-phone-shell title="Firma digital" backLink="/driver/my-trip">
+      <app-phone-shell title="Firma digital" [backLink]="['/driver/my-trip', tripId]">
       <div class="hint-banner">
         <ion-icon name="information-circle-outline"></ion-icon>
         <span>Pide al despachador o cliente que firme en el recuadro para poder habilitar el arranque del viaje.</span>
@@ -82,7 +82,8 @@ import { PhoneShellComponent } from '../../../shared/components/phone-shell.comp
 export class SignaturePage implements OnInit, OnDestroy {
   @ViewChild('canvas') canvasRef!: ElementRef<HTMLCanvasElement>;
   private pad: SignaturePad | null = null;
-  private tripId = '';
+  /** Se expone para que el botón de volver regrese a ESTE viaje, no al listado. */
+  tripId = '';
   saving = signal(false);
   error = signal<string | null>(null);
 

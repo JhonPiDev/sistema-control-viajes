@@ -40,7 +40,7 @@ const INCIDENT_TYPE_LABEL: Record<IncidentType, string> = {
   ],
   template: `
     <ion-content>
-      <app-phone-shell title="En ruta" backLink="/driver/my-trip">
+      <app-phone-shell title="En ruta" [backLink]="['/driver/my-trip', tripId]">
         <div shellUnderHeader class="phone-shell__tabs">
           <button type="button" class="tab" [class.is-active]="tab() === 'stops'" (click)="tab.set('stops')">Paradas</button>
           <button type="button" class="tab" [class.is-active]="tab() === 'expenses'" (click)="tab.set('expenses')">Gastos</button>
@@ -246,7 +246,8 @@ export class EnRoutePage implements OnInit {
   incidentType: IncidentType = 'DELAY';
   incidentDescription = '';
 
-  private tripId = '';
+  /** Se expone para que el botón de volver regrese a ESTE viaje, no al listado. */
+  tripId = '';
 
   constructor(
     private route: ActivatedRoute,

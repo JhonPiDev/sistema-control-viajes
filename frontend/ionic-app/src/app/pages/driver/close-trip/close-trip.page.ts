@@ -30,7 +30,7 @@ const INCIDENT_TYPE_LABEL: Record<IncidentType, string> = {
   ],
   template: `
     <ion-content>
-      <app-phone-shell title="Cierre de viaje" backLink="/driver/my-trip">
+      <app-phone-shell title="Cierre de viaje" [backLink]="['/driver/my-trip', tripId]">
       @if (!report()) {
         <div class="card-surface intro-card">
           <ion-icon name="sparkles-outline"></ion-icon>
@@ -204,7 +204,8 @@ export class CloseTripPage implements OnInit {
   trip = signal<Trip | null>(null);
   report = signal<TripReport | null>(null);
   saving = signal(false);
-  private tripId = '';
+  /** Se expone para que el botón de volver regrese a ESTE viaje, no al listado. */
+  tripId = '';
 
   constructor(
     private route: ActivatedRoute,

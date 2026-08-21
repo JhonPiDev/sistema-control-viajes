@@ -9,7 +9,7 @@ import { addIcons } from 'ionicons';
 import {
   settingsOutline, peopleOutline, createOutline, playOutline, navigateOutline, chevronForwardOutline,
   flagOutline, checkmarkDoneOutline, busOutline, lockClosedOutline, star, checkmarkCircle,
-  locationOutline,
+  locationOutline, alertCircleOutline,
 } from 'ionicons/icons';
 import { TripsService } from '../../../core/services/trips.service';
 import { Trip } from '../../../core/models/models';
@@ -140,10 +140,19 @@ import { EmptyStateComponent } from '../../../shared/components/empty-state.comp
           </div>
 
           @if (checkinComplete() && hasSignature()) {
-            <div class="ready-banner">
-              <ion-icon name="checkmark-circle"></ion-icon>
-              <span>Todo listo: check-in y firma completos. Ya puedes iniciar el viaje.</span>
-            </div>
+            @if (trip()!.passengers.length > 0 && boardedCount() === 0) {
+              <!-- Marcar a todos ausentes deja el check-in "completo", pero
+                   anunciar "todo listo" sería engañoso: el viaje saldría vacío. -->
+              <div class="ready-banner ready-banner--warn">
+                <ion-icon name="alert-circle-outline"></ion-icon>
+                <span>Ningún pasajero abordó. Si arrancas así, el viaje sale vacío.</span>
+              </div>
+            } @else {
+              <div class="ready-banner">
+                <ion-icon name="checkmark-circle"></ion-icon>
+                <span>Todo listo: {{ boardedCount() }} de {{ trip()!.passengers.length }} a bordo y firma capturada.</span>
+              </div>
+            }
           }
 
           <button
@@ -342,11 +351,16 @@ import { EmptyStateComponent } from '../../../shared/components/empty-state.comp
       margin-top: var(--app-space-md);
       padding: 12px 14px;
       border-radius: var(--app-radius-md);
-      background: rgba(22, 163, 74, .12);
+      background: rgba(var(--app-color-success-rgb), .12);
       color: var(--app-color-success);
       font-weight: 700;
-      font-size: 0.85rem;
+      font-size: 0.82rem;
+      line-height: 1.4;
       ion-icon { font-size: 20px; flex-shrink: 0; }
+    }
+    .ready-banner--warn {
+      background: rgba(var(--app-color-warning-rgb), .14);
+      color: var(--app-color-warning);
     }
     .cta-text span { color: var(--app-color-text-muted); font-size: 0.78rem; margin-top: 2px; }
     .lock-hint {
@@ -386,7 +400,7 @@ export class MyTripPage implements OnDestroy {
     addIcons({
       settingsOutline, peopleOutline, createOutline, playOutline, navigateOutline, chevronForwardOutline,
       flagOutline, checkmarkDoneOutline, busOutline, lockClosedOutline, star, checkmarkCircle,
-      locationOutline,
+      locationOutline, alertCircleOutline,
     });
   }
 
@@ -502,8 +516,36 @@ export class MyTripPage implements OnDestroy {
     return this.chooser().find((t) => t.id !== current.id && t.status === 'IN_PROGRESS') || null;
   }
 
+  /** Cuántos pasajeros quedaron marcados como abordados en el check-in. */
+  boardedCount(): number {
+    return (this.trip()?.passengers || []).filter((p) => p.boardingStatus === 'BOARDED').length;
+  }
+
   async startTrip() {
     if (!this.trip() || this.otherTripInProgress()) return;
+
+    // Arrancar sin nadie a bordo casi siempre es un error de marcado, pero
+    // es válido cuando todos suben en una parada intermedia (el conductor
+    // los agrega en ruta). Por eso se avisa en vez de bloquear.
+    if (this.trip()!.passengers.length > 0 && this.boardedCount() === 0) {
+      const alert = await this.alertController.create({
+        header: 'Ningún pasajero abordó',
+        message:
+          'Marcaste a todos como ausentes, así que el viaje arrancaría vacío. ' +
+          'Si aún faltan pasajeros por subir en una parada, puedes continuar y agregarlos en ruta.',
+        buttons: [
+          { text: 'Revisar check-in', role: 'cancel' },
+          { text: 'Iniciar de todas formas', handler: () => this.doStart() },
+        ],
+      });
+      await alert.present();
+      return;
+    }
+
+    await this.doStart();
+  }
+
+  private async doStart() {
     this.error.set(null);
     this.starting.set(true);
     try {
