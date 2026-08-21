@@ -566,7 +566,13 @@ ion-chip {
   min-height: 100%;
   display: flex;
   box-sizing: border-box;
-  padding: var(--app-space-lg) var(--app-space-md);
+  /* Suma el área segura para que la cabecera de la tarjeta no quede bajo
+     la barra de estado / notch (estas páginas no usan ion-header). */
+  padding:
+    calc(var(--app-space-lg) + var(--app-safe-top))
+    calc(var(--app-space-md) + var(--app-safe-right))
+    calc(var(--app-space-lg) + var(--app-safe-bottom))
+    calc(var(--app-space-md) + var(--app-safe-left));
 }
 .phone-shell {
   width: 100%;
@@ -644,7 +650,11 @@ ion-chip {
 .admin-shell__main {
   flex: 1;
   min-width: 0;
-  padding: 32px 40px;
+  padding:
+    calc(32px + var(--app-safe-top))
+    calc(40px + var(--app-safe-right))
+    32px
+    40px;
   max-width: 1160px;
 }
 .admin-shell__header {
@@ -688,7 +698,10 @@ ion-chip {
     /* El padding inferior deja libre la altura de la barra de navegación
        fija (~60px) más la barra de gestos del sistema, para que el último
        elemento de la página no quede debajo de ella. */
-    padding: var(--app-space-md) var(--app-space-md)
-             calc(72px + env(safe-area-inset-bottom, 0px));
+    padding:
+      calc(var(--app-space-md) + var(--app-safe-top))
+      calc(var(--app-space-md) + var(--app-safe-right))
+      calc(72px + var(--app-safe-bottom))
+      calc(var(--app-space-md) + var(--app-safe-left));
   }
 }

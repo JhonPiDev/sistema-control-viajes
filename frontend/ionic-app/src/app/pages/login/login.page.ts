@@ -81,7 +81,12 @@ import { AuthService } from '../../core/services/auth.service';
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      padding: var(--app-space-lg);
+      box-sizing: border-box;
+      padding:
+        calc(var(--app-space-lg) + var(--app-safe-top))
+        calc(var(--app-space-lg) + var(--app-safe-right))
+        calc(var(--app-space-lg) + var(--app-safe-bottom))
+        calc(var(--app-space-lg) + var(--app-safe-left));
     }
     .brand { text-align: center; color: var(--app-color-text); margin-bottom: var(--app-space-lg); }
     .brand-badge {

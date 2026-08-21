@@ -61,7 +61,11 @@ import { AuthService } from '../../core/services/auth.service';
       flex-shrink: 0;
       background: var(--app-color-surface);
       border-right: 1px solid var(--app-color-border);
-      padding: 18px 12px;
+      padding:
+        calc(18px + var(--app-safe-top))
+        12px
+        calc(18px + var(--app-safe-bottom))
+        calc(12px + var(--app-safe-left));
       display: flex;
       flex-direction: column;
       gap: 4px;
@@ -168,7 +172,11 @@ import { AuthService } from '../../core/services/auth.service';
         border-top: 1px solid var(--app-color-border);
         box-shadow: 0 -2px 12px rgba(18, 20, 43, .06);
         /* Respeta la barra de gestos de iOS/Android. */
-        padding: 6px 6px calc(6px + env(safe-area-inset-bottom, 0px));
+        padding:
+          6px
+          calc(6px + var(--app-safe-right))
+          calc(6px + var(--app-safe-bottom))
+          calc(6px + var(--app-safe-left));
       }
       /* Marca y usuario no caben ni aportan aquí: el título de la
          página ya dice dónde estás y la cuenta vive en Ajustes. */

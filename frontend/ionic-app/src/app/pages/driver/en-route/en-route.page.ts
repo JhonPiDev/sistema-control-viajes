@@ -15,6 +15,7 @@ import { TripsService } from '../../../core/services/trips.service';
 import { Expense, ExpenseType, Incident, IncidentType, Passenger, Trip } from '../../../core/models/models';
 import { PhoneShellComponent } from '../../../shared/components/phone-shell.component';
 import { EmptyStateComponent } from '../../../shared/components/empty-state.component';
+import { MoneyPipe } from '../../../shared/pipes/money.pipe';
 
 const EXPENSE_TYPE_LABEL: Record<ExpenseType, string> = {
   FUEL: 'Combustible extra',
@@ -35,7 +36,7 @@ const INCIDENT_TYPE_LABEL: Record<IncidentType, string> = {
   standalone: true,
   imports: [
     CommonModule, FormsModule, IonContent, IonIcon, IonSpinner,
-    PhoneShellComponent, EmptyStateComponent,
+    PhoneShellComponent, EmptyStateComponent, MoneyPipe,
   ],
   template: `
     <ion-content>
@@ -123,7 +124,7 @@ const INCIDENT_TYPE_LABEL: Record<IncidentType, string> = {
                   <div class="data-row__title">{{ expenseTypeLabel(e.type) }}</div>
                   <div class="data-row__meta">{{ e.concept }}</div>
                 </div>
-                <div class="amount">{{ e.amount | number:'1.0-0' }}</div>
+                <div class="amount">{{ e.amount | money }}</div>
               </div>
             }
           </div>

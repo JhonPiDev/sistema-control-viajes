@@ -12,6 +12,7 @@ import { Trip, TripReport, IncidentType } from '../../../core/models/models';
 import { PhoneShellComponent } from '../../../shared/components/phone-shell.component';
 import { StatCardComponent } from '../../../shared/components/stat-card.component';
 import { StatusPillComponent } from '../../../shared/components/status-pill.component';
+import { MoneyPipe } from '../../../shared/pipes/money.pipe';
 
 const INCIDENT_TYPE_LABEL: Record<IncidentType, string> = {
   DELAY: 'Retraso',
@@ -25,7 +26,7 @@ const INCIDENT_TYPE_LABEL: Record<IncidentType, string> = {
   standalone: true,
   imports: [
     CommonModule, RouterLink, IonContent, IonIcon, IonSpinner,
-    PhoneShellComponent, StatCardComponent, StatusPillComponent,
+    PhoneShellComponent, StatCardComponent, StatusPillComponent, MoneyPipe,
   ],
   template: `
     <ion-content>
@@ -57,7 +58,7 @@ const INCIDENT_TYPE_LABEL: Record<IncidentType, string> = {
             label="Pasajeros transportados"
             tone="primary"></app-stat-card>
           <app-stat-card
-            [value]="report()!.expenses.total | number:'1.0-0'"
+            [value]="report()!.expenses.total | money"
             [label]="'Total de gastos (' + report()!.expenses.count + ')'"
             tone="warning"></app-stat-card>
           <app-stat-card

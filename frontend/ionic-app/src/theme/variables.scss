@@ -83,6 +83,16 @@
   --app-shadow-lg: 0 10px 30px rgba(18, 20, 43, 0.08);
   --app-shadow-primary: 0 6px 16px rgba(var(--app-color-primary-rgb), 0.22);
 
+  // ---- Área segura (notch, barra de estado, barra de gestos) ----
+  // Ionic publica --ion-safe-area-* cuando corre dentro de la app; en el
+  // navegador se cae a env(), que funciona porque index.html declara
+  // viewport-fit=cover. Sin esto el contenido queda bajo la barra de
+  // estado, ya que las páginas no usan ion-header.
+  --app-safe-top: var(--ion-safe-area-top, env(safe-area-inset-top, 0px));
+  --app-safe-bottom: var(--ion-safe-area-bottom, env(safe-area-inset-bottom, 0px));
+  --app-safe-left: var(--ion-safe-area-left, env(safe-area-inset-left, 0px));
+  --app-safe-right: var(--ion-safe-area-right, env(safe-area-inset-right, 0px));
+
   // ---- Transiciones ----
   --app-transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
   --app-transition-base: 240ms cubic-bezier(0.4, 0, 0.2, 1);

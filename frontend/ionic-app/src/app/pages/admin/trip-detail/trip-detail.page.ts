@@ -18,6 +18,7 @@ import { Trip, Expense, ExpenseType, Incident, IncidentType } from '../../../cor
 import { AdminPageComponent } from '../../../shared/components/admin-page.component';
 import { StatusPillComponent } from '../../../shared/components/status-pill.component';
 import { EmptyStateComponent } from '../../../shared/components/empty-state.component';
+import { MoneyPipe } from '../../../shared/pipes/money.pipe';
 
 const EXPENSE_TYPE_LABEL: Record<ExpenseType, string> = {
   FUEL: 'Combustible extra',
@@ -39,7 +40,7 @@ const INCIDENT_TYPE_LABEL: Record<IncidentType, string> = {
   imports: [
     CommonModule, RouterLink, IonContent, IonIcon, IonButton,
     IonRefresher, IonRefresherContent, AdminPageComponent, StatusPillComponent,
-    EmptyStateComponent,
+    EmptyStateComponent, MoneyPipe,
   ],
   template: `
     <ion-content>
@@ -115,7 +116,7 @@ const INCIDENT_TYPE_LABEL: Record<IncidentType, string> = {
                       <div class="data-row__title">{{ expenseTypeLabel(e.type) }}</div>
                       <div class="data-row__meta">{{ e.concept }}</div>
                     </div>
-                    <div class="amount">{{ e.amount | number:'1.0-0' }}</div>
+                    <div class="amount">{{ e.amount | money }}</div>
                   </div>
                 }
               </div>
