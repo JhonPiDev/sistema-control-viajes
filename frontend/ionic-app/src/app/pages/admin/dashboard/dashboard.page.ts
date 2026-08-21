@@ -1,4 +1,4 @@
-import { Component, OnInit, signal } from '@angular/core';
+import { Component, OnDestroy, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import {
@@ -237,7 +237,7 @@ const STATUS_COLOR: Record<TripStatus, string> = {
     }
   `],
 })
-export class DashboardPage implements OnInit {
+export class DashboardPage implements OnDestroy {
   statusFilter = signal<string>('');
   STATUS_LABEL = STATUS_LABEL;
   STATUS_COLOR = STATUS_COLOR;
@@ -254,6 +254,19 @@ export class DashboardPage implements OnInit {
   page = signal(1);
   meta = signal<{ total: number; totalPages: number }>({ total: 0, totalPages: 1 });
 
+  // Refresco en vivo: como Ionic mantiene viva la página en el stack de
+  // navegación (no se destruye al volver de "Crear viaje"), `ngOnInit`
+  // solo se dispara una vez y nunca vuelve a correr — por eso el
+  // dashboard se quedaba con la lista vieja al volver de crear un viaje.
+  // `ionViewWillEnter` sí se dispara cada vez que la página vuelve a
+  // quedar visible, así que ahí recargamos. Además, mientras el admin
+  // está viendo el dashboard, se sondea el backend cada pocos segundos
+  // (en silencio, sin mostrar el spinner) para reflejar cambios hechos
+  // por el conductor (p. ej. que inició o cerró un viaje) sin que el
+  // admin tenga que hacer nada.
+  private pollTimer: ReturnType<typeof setInterval> | null = null;
+  private readonly POLL_MS = 8000;
+
   constructor(
     public trips: TripsService,
     public auth: AuthService,
@@ -266,13 +279,30 @@ export class DashboardPage implements OnInit {
     });
   }
 
-  ngOnInit() {
+  ionViewWillEnter() {
     this.load();
+    this.stopPolling();
+    this.pollTimer = setInterval(() => this.load({ silent: true }), this.POLL_MS);
   }
 
-  async load() {
+  ionViewWillLeave() {
+    this.stopPolling();
+  }
+
+  ngOnDestroy() {
+    this.stopPolling();
+  }
+
+  private stopPolling() {
+    if (this.pollTimer) {
+      clearInterval(this.pollTimer);
+      this.pollTimer = null;
+    }
+  }
+
+  async load(opts?: { silent?: boolean }) {
     const [result] = await Promise.all([
-      this.trips.list(this.page(), PAGE_SIZE, this.statusFilter() || undefined),
+      this.trips.list(this.page(), PAGE_SIZE, this.statusFilter() || undefined, { silent: opts?.silent }),
       this.loadStats(),
     ]);
     this.meta.set({ total: result.meta.total, totalPages: result.meta.totalPages });

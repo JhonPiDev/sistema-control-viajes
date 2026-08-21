@@ -1,4 +1,4 @@
-import { Component, OnInit, signal } from '@angular/core';
+import { Component, OnDestroy, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import {
@@ -162,11 +162,17 @@ import { Trip, Expense, Incident, Passenger } from '../../../core/models/models'
     }
   `],
 })
-export class TripDetailPage implements OnInit {
+export class TripDetailPage implements OnDestroy {
   trip = signal<Trip | null>(null);
   expenses = signal<Expense[]>([]);
   incidents = signal<Incident[]>([]);
   private tripId = '';
+
+  // Sondeo en segundo plano mientras se ve el reporte, para que los
+  // check-ins, gastos y novedades que registra el conductor en vivo
+  // aparezcan solos, sin que el admin tenga que jalar para refrescar.
+  private pollTimer: ReturnType<typeof setInterval> | null = null;
+  private readonly POLL_MS = 8000;
 
   constructor(
     private route: ActivatedRoute,
@@ -181,9 +187,26 @@ export class TripDetailPage implements OnInit {
     });
   }
 
-  async ngOnInit() {
+  async ionViewWillEnter() {
     this.tripId = this.route.snapshot.paramMap.get('id')!;
     await this.load();
+    this.stopPolling();
+    this.pollTimer = setInterval(() => this.load(), this.POLL_MS);
+  }
+
+  ionViewWillLeave() {
+    this.stopPolling();
+  }
+
+  ngOnDestroy() {
+    this.stopPolling();
+  }
+
+  private stopPolling() {
+    if (this.pollTimer) {
+      clearInterval(this.pollTimer);
+      this.pollTimer = null;
+    }
   }
 
   async load() {

@@ -321,6 +321,10 @@ errores de CORS, agrega el origen que use el WebView de Capacitor en
 Android (`https://localhost`) a esa variable en Render, junto a la URL
 de Vercel: `CORS_ORIGIN=https://sistema-control-viajes.vercel.app,https://localhost`.
 
+Es un APK **debug** (sin firmar) — perfecto para instalar y probar, pero no
+para publicar en Play Store (eso requeriría firmarlo con un keystore de
+release, fuera del alcance de esta prueba técnica).
+
 ---
 
 ## 10. Despliegue en producción

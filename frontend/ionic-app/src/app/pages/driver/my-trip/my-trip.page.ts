@@ -1,4 +1,4 @@
-import { Component, OnInit, signal } from '@angular/core';
+import { Component, OnDestroy, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import {
@@ -271,7 +271,7 @@ const STATUS_COLOR: Record<TripStatus, string> = {
     .stop-order { font-size: 0.72rem; color: var(--app-color-text-muted); margin: 0 0 2px; }
   `],
 })
-export class MyTripPage implements OnInit {
+export class MyTripPage implements OnDestroy {
   trip = signal<Trip | null>(null);
   // Todos los viajes activos (no finalizados) del conductor. Si hay más de
   // uno y la URL no trae un :id específico, se usa para mostrar el
@@ -283,6 +283,13 @@ export class MyTripPage implements OnInit {
   error = signal<string | null>(null);
   STATUS_LABEL = STATUS_LABEL;
   STATUS_COLOR = STATUS_COLOR;
+
+  // Igual que en el dashboard del admin: sondeo en segundo plano mientras
+  // la página está visible, para que un viaje recién asignado por el
+  // admin (o un cambio de estado) le aparezca al conductor sin que tenga
+  // que jalar para refrescar.
+  private pollTimer: ReturnType<typeof setInterval> | null = null;
+  private readonly POLL_MS = 8000;
 
   constructor(
     private tripsService: TripsService,
@@ -296,14 +303,31 @@ export class MyTripPage implements OnInit {
     });
   }
 
-  async ngOnInit() {
+  async ionViewWillEnter() {
     await this.load();
+    this.stopPolling();
+    this.pollTimer = setInterval(() => this.load({ silent: true }), this.POLL_MS);
   }
 
-  async load() {
-    this.loading.set(true);
+  ionViewWillLeave() {
+    this.stopPolling();
+  }
+
+  ngOnDestroy() {
+    this.stopPolling();
+  }
+
+  private stopPolling() {
+    if (this.pollTimer) {
+      clearInterval(this.pollTimer);
+      this.pollTimer = null;
+    }
+  }
+
+  async load(opts?: { silent?: boolean }) {
+    if (!opts?.silent) this.loading.set(true);
     try {
-      const result = await this.tripsService.list(1, 20);
+      const result = await this.tripsService.list(1, 20, undefined, { silent: true });
       const active = result.data.filter((t) => t.status !== 'FINISHED');
       this.chooser.set(active);
 
@@ -318,7 +342,7 @@ export class MyTripPage implements OnInit {
         this.trip.set(null);
       }
     } finally {
-      this.loading.set(false);
+      if (!opts?.silent) this.loading.set(false);
     }
   }
 

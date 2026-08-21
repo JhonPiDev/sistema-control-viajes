@@ -21,8 +21,15 @@ export class TripsService {
     return `${this.config.apiUrl}/trips`;
   }
 
-  async list(page = 1, limit = 10, status?: string): Promise<PagedResult<Trip>> {
-    this.loading.set(true);
+  /**
+   * `silent`: no toca el signal `loading` (usado para el spinner de
+   * pantalla completa). Se pasa en true desde los refrescos automáticos
+   * en segundo plano (polling) para que no parpadee la lista cada vez
+   * que se refresca sola; se deja en false (default) para la carga
+   * inicial y el pull-to-refresh, donde sí se quiere ver el spinner.
+   */
+  async list(page = 1, limit = 10, status?: string, opts?: { silent?: boolean }): Promise<PagedResult<Trip>> {
+    if (!opts?.silent) this.loading.set(true);
     try {
       let url = `${this.base}?page=${page}&limit=${limit}`;
       if (status) url += `&status=${status}`;
@@ -30,7 +37,7 @@ export class TripsService {
       this.trips.set(res.data);
       return res;
     } finally {
-      this.loading.set(false);
+      if (!opts?.silent) this.loading.set(false);
     }
   }
 

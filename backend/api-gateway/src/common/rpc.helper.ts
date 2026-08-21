@@ -20,8 +20,13 @@ export async function callService<T>(
   path: string,
   body?: unknown,
 ): Promise<T> {
+  // 25s en vez de 8s: en el plan gratuito de Render, un microservicio
+  // dormido puede tardar hasta ~1 minuto en el PRIMER request tras
+  // despertar (el README ya avisa de esto), y 8s se quedaba corto — el
+  // gateway se rendía y devolvía un error aunque el microservicio ya
+  // estuviera despertando en el fondo.
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 8000);
+  const timeoutId = setTimeout(() => controller.abort(), 25000);
 
   let response: Response;
   try {
