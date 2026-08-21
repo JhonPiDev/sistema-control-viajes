@@ -6,6 +6,7 @@ import { provideIonicAngular } from '@ionic/angular/standalone';
 import { routes } from './app.routes';
 import { ConfigService } from './core/services/config.service';
 import { ThemeService } from './core/services/theme.service';
+import { pageTransition } from './core/animations/page-transition';
 import { authInterceptor } from './core/interceptors/auth.interceptor';
 import { errorInterceptor } from './core/interceptors/error.interceptor';
 
@@ -18,7 +19,7 @@ function initializeApp(config: ConfigService, theme: ThemeService) {
 
 export const appConfig: ApplicationConfig = {
   providers: [
-    provideIonicAngular({}),
+    provideIonicAngular({ navAnimation: pageTransition }),
     provideRouter(routes),
     provideHttpClient(withInterceptors([authInterceptor, errorInterceptor])),
     {

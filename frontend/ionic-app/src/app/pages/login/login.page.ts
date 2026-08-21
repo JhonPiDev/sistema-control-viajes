@@ -3,19 +3,18 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import {
-  IonContent, IonItem, IonLabel, IonInput, IonButton, IonIcon,
-  IonSpinner, IonText, IonCard, IonCardContent,
+  IonContent, IonIcon, IonSpinner, IonCard, IonCardContent,
 } from '@ionic/angular/standalone';
 import { addIcons } from 'ionicons';
-import { busOutline, lockClosedOutline, mailOutline, arrowForwardOutline } from 'ionicons/icons';
+import { busOutline, arrowForwardOutline } from 'ionicons/icons';
 import { AuthService } from '../../core/services/auth.service';
 
 @Component({
   selector: 'app-login',
   standalone: true,
   imports: [
-    CommonModule, FormsModule, IonContent, IonItem, IonLabel, IonInput,
-    IonButton, IonIcon, IonSpinner, IonText, IonCard, IonCardContent,
+    CommonModule, FormsModule, IonContent, IonIcon, IonSpinner,
+    IonCard, IonCardContent,
   ],
   template: `
     <ion-content class="login-bg" [fullscreen]="true">
@@ -34,32 +33,38 @@ import { AuthService } from '../../core/services/auth.service';
             <p class="form-subtitle">Ingresa con tu cuenta de Administrador o Conductor</p>
 
             <form (ngSubmit)="onSubmit()">
-              <ion-item fill="outline" class="ion-margin-bottom">
-                <ion-icon name="mail-outline" slot="start"></ion-icon>
-                <ion-label position="floating">Correo electrónico</ion-label>
-                <ion-input type="email" [(ngModel)]="email" name="email" required></ion-input>
-              </ion-item>
+              <label class="field-label" for="login-email">Correo electrónico</label>
+              <input
+                id="login-email"
+                class="field-control field-gap"
+                type="email"
+                placeholder="tucorreo@viajes.com"
+                [(ngModel)]="email"
+                name="email"
+                required />
 
-              <ion-item fill="outline" class="ion-margin-bottom">
-                <ion-icon name="lock-closed-outline" slot="start"></ion-icon>
-                <ion-label position="floating">Contraseña</ion-label>
-                <ion-input type="password" [(ngModel)]="password" name="password" required></ion-input>
-              </ion-item>
+              <label class="field-label" for="login-password">Contraseña</label>
+              <input
+                id="login-password"
+                class="field-control field-gap"
+                type="password"
+                placeholder="••••••••"
+                [(ngModel)]="password"
+                name="password"
+                required />
 
               @if (error()) {
-                <ion-text color="danger">
-                  <p class="error-msg">{{ error() }}</p>
-                </ion-text>
+                <p class="field-error">{{ error() }}</p>
               }
 
-              <ion-button expand="block" type="submit" [disabled]="loading()">
+              <button type="submit" class="btn btn--primary btn--block" [disabled]="loading()">
                 @if (loading()) {
                   <ion-spinner name="dots"></ion-spinner>
                 } @else {
                   Ingresar
-                  <ion-icon name="arrow-forward-outline" slot="end"></ion-icon>
+                  <ion-icon name="arrow-forward-outline"></ion-icon>
                 }
-              </ion-button>
+              </button>
             </form>
           </ion-card-content>
         </ion-card>
@@ -68,9 +73,7 @@ import { AuthService } from '../../core/services/auth.service';
   `,
   styles: [`
     .login-bg {
-      --background: radial-gradient(circle at 15% 15%, rgba(255,255,255,0.16), transparent 40%),
-                    radial-gradient(circle at 85% 85%, rgba(255,255,255,0.12), transparent 45%),
-                    var(--app-gradient);
+      --background: var(--app-color-background);
     }
     .login-wrap {
       min-height: 100%;
@@ -80,34 +83,34 @@ import { AuthService } from '../../core/services/auth.service';
       justify-content: center;
       padding: var(--app-space-lg);
     }
-    .brand { text-align: center; color: #fff; margin-bottom: var(--app-space-lg); }
+    .brand { text-align: center; color: var(--app-color-text); margin-bottom: var(--app-space-lg); }
     .brand-badge {
-      width: 64px;
-      height: 64px;
+      width: 52px;
+      height: 52px;
       margin: 0 auto 12px;
-      border-radius: var(--app-radius-lg);
-      background: rgba(255,255,255,0.16);
-      backdrop-filter: blur(6px);
+      border-radius: var(--app-radius-md);
+      background: var(--app-color-primary);
+      color: #fff;
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 32px;
-      border: 1px solid rgba(255,255,255,0.28);
+      font-size: 26px;
     }
     .brand h1 {
       margin: 0;
       font-family: var(--app-font-family-heading);
-      font-size: 1.7rem;
+      font-size: 1.5rem;
       font-weight: 800;
       letter-spacing: -0.02em;
     }
-    .brand p { opacity: .88; margin: 6px 0 0; font-size: 0.9rem; }
+    .brand p { color: var(--app-color-text-muted); margin: 4px 0 0; font-size: 0.85rem; }
 
     .login-card {
       width: 100%;
       max-width: 400px;
+      border: 1px solid var(--app-color-border);
       border-radius: var(--app-radius-lg);
-      box-shadow: var(--app-shadow-lg);
+      box-shadow: var(--app-shadow-md);
       margin: 0;
     }
     .form-title {
@@ -118,11 +121,11 @@ import { AuthService } from '../../core/services/auth.service';
       color: var(--app-color-text);
     }
     .form-subtitle {
-      font-size: 0.85rem;
+      font-size: 0.82rem;
       color: var(--app-color-text-muted);
       margin: 0 0 var(--app-space-lg);
     }
-    .error-msg { font-size: .85rem; margin: 0 0 8px; }
+    .field-gap { margin-bottom: 14px; }
   `],
 })
 export class LoginPage {
@@ -132,7 +135,7 @@ export class LoginPage {
   error = signal<string | null>(null);
 
   constructor(private auth: AuthService, private router: Router) {
-    addIcons({ busOutline, lockClosedOutline, mailOutline, arrowForwardOutline });
+    addIcons({ busOutline, arrowForwardOutline });
   }
 
   async onSubmit() {

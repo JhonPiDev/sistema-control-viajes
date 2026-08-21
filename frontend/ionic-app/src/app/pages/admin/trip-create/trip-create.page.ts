@@ -3,19 +3,18 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import {
-  IonHeader, IonToolbar, IonTitle, IonContent, IonButtons, IonBackButton,
-  IonItem, IonLabel, IonInput, IonSelect, IonSelectOption, IonButton, IonIcon,
-  IonList, IonSpinner, IonText, ModalController,
+  IonContent, IonIcon, IonSpinner, ModalController,
 } from '@ionic/angular/standalone';
 import { addIcons } from 'ionicons';
 import {
-  addCircleOutline, trashOutline, saveOutline, mapOutline, peopleOutline,
-  personCircleOutline, locationOutline, flagOutline, chevronForwardOutline,
+  addCircleOutline, closeOutline, chevronForwardOutline,
 } from 'ionicons/icons';
 import { TripsService } from '../../../core/services/trips.service';
 import { DriversService } from '../../../core/services/drivers.service';
 import { Driver } from '../../../core/models/models';
 import { CityPickerComponent } from '../../../shared/components/city-picker.component';
+import { AdminPageComponent } from '../../../shared/components/admin-page.component';
+import { EmptyStateComponent } from '../../../shared/components/empty-state.component';
 
 interface PassengerRow { name: string; document: string; }
 
@@ -23,49 +22,38 @@ interface PassengerRow { name: string; document: string; }
   selector: 'app-trip-create',
   standalone: true,
   imports: [
-    CommonModule, FormsModule, RouterLink, IonHeader, IonToolbar, IonTitle, IonContent,
-    IonButtons, IonBackButton, IonItem, IonLabel, IonInput, IonSelect,
-    IonSelectOption, IonButton, IonIcon, IonList, IonSpinner, IonText,
+    CommonModule, FormsModule, RouterLink, IonContent, IonIcon, IonSpinner,
+    AdminPageComponent, EmptyStateComponent,
   ],
   template: `
-    <ion-header>
-      <ion-toolbar>
-        <ion-buttons slot="start"><ion-back-button defaultHref="/admin/dashboard"></ion-back-button></ion-buttons>
-        <ion-title>{{ editMode() ? 'Editar Viaje' : 'Nuevo Viaje' }}</ion-title>
-      </ion-toolbar>
-    </ion-header>
-
-    <ion-content class="ion-padding">
-      <div class="ion-page-desktop">
+    <ion-content>
+      <app-admin-page
+        [title]="editMode() ? 'Editar viaje' : 'Nuevo viaje'"
+        [subtitle]="editMode() ? 'Ajusta la ruta, el conductor o las paradas' : 'Registra origen, destino, conductor y paradas'"
+        [maxWidth]="840">
         @if (editMode() && loadingTrip()) {
-          <div class="empty-state"><ion-spinner></ion-spinner></div>
+          <app-empty-state loading></app-empty-state>
         } @else if (editMode() && blockedReason()) {
           <div class="card-surface">
-            <p>{{ blockedReason() }}</p>
-            <ion-button expand="block" fill="outline" class="ion-margin-top" routerLink="/admin/dashboard">
+            <p class="blocked-msg">{{ blockedReason() }}</p>
+            <button type="button" class="btn btn--ghost btn--block" routerLink="/admin/dashboard">
               Volver al panel
-            </ion-button>
+            </button>
           </div>
         } @else {
         <form (ngSubmit)="submit()">
-          <div class="card-surface">
-            <p class="section-title"><ion-icon name="map-outline"></ion-icon> Datos del viaje</p>
+          <div class="card-surface form-card">
+            <p class="card-title section-gap">Datos del viaje</p>
 
+            <label class="field-label">Origen</label>
             <button type="button" class="route-field" (click)="pickOrigin()">
-              <ion-icon name="location-outline"></ion-icon>
-              <div class="route-field-text">
-                <span class="route-field-label">Origen</span>
-                <span class="route-field-value" [class.placeholder]="!origin">{{ origin || 'Elige una ciudad' }}</span>
-              </div>
+              <span class="route-field-value" [class.placeholder]="!origin">{{ origin || 'Elige una ciudad' }}</span>
               <ion-icon name="chevron-forward-outline" class="chev"></ion-icon>
             </button>
 
+            <label class="field-label">Destino</label>
             <button type="button" class="route-field" (click)="pickDestination()">
-              <ion-icon name="flag-outline"></ion-icon>
-              <div class="route-field-text">
-                <span class="route-field-label">Destino</span>
-                <span class="route-field-value" [class.placeholder]="!destination">{{ destination || 'Elige una ciudad' }}</span>
-              </div>
+              <span class="route-field-value" [class.placeholder]="!destination">{{ destination || 'Elige una ciudad' }}</span>
               <ion-icon name="chevron-forward-outline" class="chev"></ion-icon>
             </button>
 
@@ -75,110 +63,128 @@ interface PassengerRow { name: string; document: string; }
               </p>
             }
 
-            <ion-item fill="outline" class="ion-margin-top">
-              <ion-icon name="person-circle-outline" slot="start"></ion-icon>
-              <ion-label position="floating">Conductor asignado</ion-label>
-              <ion-select [(ngModel)]="driverId" name="driverId" required>
-                @for (d of drivers(); track d.id) {
-                  <ion-select-option [value]="d.id">{{ d.name }}</ion-select-option>
-                }
-              </ion-select>
-            </ion-item>
+            <label class="field-label" for="trip-driver">Conductor asignado</label>
+            <select id="trip-driver" class="field-control" [(ngModel)]="driverId" name="driverId" required>
+              <option value="">Elige un conductor</option>
+              @for (d of drivers(); track d.id) {
+                <option [value]="d.id">{{ d.name }}</option>
+              }
+            </select>
           </div>
 
-          <div class="card-surface ion-margin-top">
-            <p class="section-title"><ion-icon name="location-outline"></ion-icon> Paradas intermedias</p>
-            <p class="hint">Si el viaje pasa por otras terminales antes de llegar al destino, agrégalas en orden.</p>
-            @if (stops().length > 0) {
-              <ion-list class="list-cards">
-                @for (s of stops(); track $index) {
-                  <ion-item lines="none">
-                    <ion-label>
-                      <p class="stop-order">Parada {{ $index + 1 }}</p>
-                      <h3>{{ s }}</h3>
-                    </ion-label>
-                    <ion-button fill="clear" color="danger" slot="end" (click)="removeStop($index)" type="button">
-                      <ion-icon name="trash-outline" slot="icon-only"></ion-icon>
-                    </ion-button>
-                  </ion-item>
-                }
-              </ion-list>
+          <div class="card-surface form-card">
+            <p class="card-title">Paradas intermedias</p>
+            <p class="card-hint">Si el viaje pasa por otras terminales antes de llegar al destino, agrégalas en orden.</p>
+            @for (s of stops(); track $index) {
+              <div class="field-row">
+                <div class="stop-chip">
+                  <span class="stop-chip__order">Parada {{ $index + 1 }}</span>
+                  <span class="stop-chip__city">{{ s }}</span>
+                </div>
+                <button type="button" class="btn btn--icon" (click)="removeStop($index)" aria-label="Quitar parada">
+                  <ion-icon name="close-outline"></ion-icon>
+                </button>
+              </div>
             }
-            <ion-button fill="outline" size="small" (click)="addStop()" type="button">
-              <ion-icon name="add-circle-outline" slot="start"></ion-icon>
+            <button type="button" class="btn btn--outline" (click)="addStop()">
+              <ion-icon name="add-circle-outline"></ion-icon>
               Agregar parada
-            </ion-button>
+            </button>
           </div>
 
           @if (!editMode()) {
-            <div class="card-surface ion-margin-top">
-              <p class="section-title"><ion-icon name="people-outline"></ion-icon> Lista de pasajeros</p>
-              <ion-list class="list-cards">
-                @for (p of passengers(); track $index) {
-                  <ion-item lines="none">
-                    <ion-input placeholder="Nombre" [(ngModel)]="p.name" [name]="'pname'+$index"></ion-input>
-                    <ion-input placeholder="Documento" [(ngModel)]="p.document" [name]="'pdoc'+$index"></ion-input>
-                    <ion-button fill="clear" color="danger" slot="end" (click)="removePassenger($index)">
-                      <ion-icon name="trash-outline" slot="icon-only"></ion-icon>
-                    </ion-button>
-                  </ion-item>
-                }
-              </ion-list>
-              <ion-button fill="outline" size="small" (click)="addPassenger()" type="button">
-                <ion-icon name="add-circle-outline" slot="start"></ion-icon>
+            <div class="card-surface form-card">
+              <p class="card-title section-gap">Lista de pasajeros</p>
+              @for (p of passengers(); track $index) {
+                <div class="field-row">
+                  <input class="field-control" placeholder="Nombre" [(ngModel)]="p.name" [name]="'pname'+$index" />
+                  <input class="field-control" placeholder="Documento" [(ngModel)]="p.document" [name]="'pdoc'+$index" />
+                  <button type="button" class="btn btn--icon" (click)="removePassenger($index)" aria-label="Quitar pasajero">
+                    <ion-icon name="close-outline"></ion-icon>
+                  </button>
+                </div>
+              }
+              <button type="button" class="btn btn--outline" (click)="addPassenger()">
+                <ion-icon name="add-circle-outline"></ion-icon>
                 Agregar pasajero
-              </ion-button>
+              </button>
             </div>
           } @else {
-            <p class="hint ion-margin-top">
+            <p class="card-hint edit-note">
               La lista de pasajeros de origen no se edita aquí; agrégalos desde el detalle del viaje.
             </p>
           }
 
           @if (error()) {
-            <ion-text color="danger"><p class="ion-margin-top">{{ error() }}</p></ion-text>
+            <p class="field-error">{{ error() }}</p>
           }
 
-          <ion-button expand="block" type="submit" class="ion-margin-top" [disabled]="saving()">
-            @if (saving()) { <ion-spinner name="dots"></ion-spinner> } @else {
-              <ion-icon name="save-outline" slot="start"></ion-icon> {{ editMode() ? 'Guardar cambios' : 'Crear viaje' }}
-            }
-          </ion-button>
+          <div class="form-actions">
+            <button type="button" class="btn btn--ghost" routerLink="/admin/dashboard">Cancelar</button>
+            <button type="submit" class="btn btn--primary" [disabled]="saving()">
+              @if (saving()) { <ion-spinner name="dots"></ion-spinner> } @else {
+                {{ editMode() ? 'Guardar cambios' : 'Crear viaje' }}
+              }
+            </button>
+          </div>
         </form>
         }
-      </div>
+      </app-admin-page>
     </ion-content>
   `,
   styles: [`
-    .hint {
-      color: var(--app-color-text-muted);
-      font-size: 0.82rem;
-      margin: -4px 0 var(--app-space-sm);
-    }
+    .form-card { margin-bottom: 18px; }
+    .card-title.section-gap { margin-bottom: 16px; }
+
+    /* El origen/destino abren el modal de ciudades, así que son botones
+       con el mismo aspecto que un .field-control. */
     .route-field {
-      display: flex; align-items: center; gap: 12px;
+      display: flex; align-items: center; justify-content: space-between; gap: 12px;
       width: 100%;
+      box-sizing: border-box;
       text-align: left;
       background: var(--app-color-surface);
       border: 1px solid var(--app-color-border);
-      border-radius: var(--app-radius-md);
-      padding: 12px 14px;
+      border-radius: 10px;
+      padding: 11px 12px;
       font-family: inherit;
       cursor: pointer;
-      margin-bottom: 10px;
-      > ion-icon:first-child { font-size: 20px; color: var(--app-color-primary); flex-shrink: 0; }
+      margin-bottom: 14px;
+      transition: border-color var(--app-transition-fast);
+      &:hover { border-color: var(--app-color-primary); }
     }
-    .route-field-text { display: flex; flex-direction: column; flex: 1; min-width: 0; }
-    .route-field-label { font-size: 0.72rem; color: var(--app-color-text-muted); }
-    .route-field-value { font-size: 0.95rem; color: var(--app-color-text); font-weight: 600; }
-    .route-field-value.placeholder { font-weight: 400; color: var(--app-color-text-muted); }
-    .chev { color: var(--app-color-text-muted); font-size: 16px; }
-    .stop-order { font-size: 0.72rem; color: var(--app-color-text-muted); margin: 0 0 2px; }
+    .route-field-value { font-size: 0.875rem; color: var(--app-color-text); }
+    .route-field-value.placeholder { color: var(--app-color-text-subtle); }
+    .chev { color: var(--app-color-text-subtle); font-size: 16px; flex-shrink: 0; }
+
+    /* Cada parada ya elegida se muestra como un campo de solo lectura. */
+    .stop-chip {
+      flex: 1;
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      background: var(--app-color-surface);
+      border: 1px solid var(--app-color-border);
+      border-radius: 10px;
+      padding: 7px 12px;
+    }
+    .stop-chip__order { font-size: 0.7rem; color: var(--app-color-text-subtle); }
+    .stop-chip__city { font-size: 0.875rem; font-weight: 600; color: var(--app-color-text); }
+
     .name-preview {
-      font-size: 0.85rem;
+      font-size: 0.8rem;
       color: var(--app-color-text-muted);
-      margin: -2px 0 var(--app-space-sm) 2px;
+      margin: -4px 0 14px;
       strong { color: var(--app-color-text); }
+    }
+    .edit-note { margin: 0 0 18px; }
+    .blocked-msg { font-size: 0.9rem; margin: 0 0 var(--app-space-md); }
+
+    .form-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+      margin-top: var(--app-space-lg);
     }
   `],
 })
@@ -206,10 +212,7 @@ export class TripCreatePage implements OnInit {
     private route: ActivatedRoute,
     private modalCtrl: ModalController,
   ) {
-    addIcons({
-      addCircleOutline, trashOutline, saveOutline, mapOutline, peopleOutline,
-      personCircleOutline, locationOutline, flagOutline, chevronForwardOutline,
-    });
+    addIcons({ addCircleOutline, closeOutline, chevronForwardOutline });
   }
 
   async ngOnInit() {

@@ -2,201 +2,227 @@ import { Component, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute } from '@angular/router';
-import {
-  IonHeader, IonToolbar, IonTitle, IonContent, IonButtons, IonBackButton,
-  IonSegment, IonSegmentButton, IonLabel, IonItem, IonInput, IonSelect,
-  IonSelectOption, IonTextarea, IonButton, IonIcon, IonList, IonBadge, IonSpinner,
-} from '@ionic/angular/standalone';
+import { IonContent, IonIcon, IonSpinner } from '@ionic/angular/standalone';
 import { addIcons } from 'ionicons';
 import {
-  cashOutline, alertCircleOutline, addOutline, locationOutline,
-  personAddOutline, peopleOutline,
+  cashOutline, alertCircleOutline, locationOutline,
+  personAddOutline,
 } from 'ionicons/icons';
 import { ExpensesService } from '../../../core/services/expenses.service';
 import { IncidentsService } from '../../../core/services/incidents.service';
 import { PassengersService } from '../../../core/services/passengers.service';
 import { TripsService } from '../../../core/services/trips.service';
 import { Expense, ExpenseType, Incident, IncidentType, Passenger, Trip } from '../../../core/models/models';
+import { PhoneShellComponent } from '../../../shared/components/phone-shell.component';
+import { EmptyStateComponent } from '../../../shared/components/empty-state.component';
+
+const EXPENSE_TYPE_LABEL: Record<ExpenseType, string> = {
+  FUEL: 'Combustible extra',
+  TOLL: 'Peaje no previsto',
+  REPAIR: 'Reparación / desvare',
+  OTHER: 'Otro',
+};
+
+const INCIDENT_TYPE_LABEL: Record<IncidentType, string> = {
+  DELAY: 'Retraso',
+  PASSENGER_ISSUE: 'Problema con pasajeros',
+  DETOUR: 'Desvío',
+  OTHER: 'Otro',
+};
 
 @Component({
   selector: 'app-en-route',
   standalone: true,
   imports: [
-    CommonModule, FormsModule, IonHeader, IonToolbar, IonTitle, IonContent,
-    IonButtons, IonBackButton, IonSegment, IonSegmentButton, IonLabel, IonItem,
-    IonInput, IonSelect, IonSelectOption, IonTextarea, IonButton, IonIcon,
-    IonList, IonBadge, IonSpinner,
+    CommonModule, FormsModule, IonContent, IonIcon, IonSpinner,
+    PhoneShellComponent, EmptyStateComponent,
   ],
   template: `
-    <ion-header>
-      <ion-toolbar>
-        <ion-buttons slot="start"><ion-back-button defaultHref="/driver/my-trip"></ion-back-button></ion-buttons>
-        <ion-title>En Ruta</ion-title>
-      </ion-toolbar>
-      <ion-toolbar>
-        <ion-segment [value]="tab()" (ionChange)="tab.set($any($event.detail.value))" scrollable="true">
-          <ion-segment-button value="stops">
-            <ion-icon name="location-outline"></ion-icon>
-            <ion-label>Paradas</ion-label>
-          </ion-segment-button>
-          <ion-segment-button value="expenses">
-            <ion-icon name="cash-outline"></ion-icon>
-            <ion-label>Gastos</ion-label>
-          </ion-segment-button>
-          <ion-segment-button value="incidents">
-            <ion-icon name="alert-circle-outline"></ion-icon>
-            <ion-label>Novedades</ion-label>
-          </ion-segment-button>
-        </ion-segment>
-      </ion-toolbar>
-    </ion-header>
+    <ion-content>
+      <app-phone-shell title="En ruta" backLink="/driver/my-trip">
+        <div shellUnderHeader class="phone-shell__tabs">
+          <button type="button" class="tab" [class.is-active]="tab() === 'stops'" (click)="tab.set('stops')">Paradas</button>
+          <button type="button" class="tab" [class.is-active]="tab() === 'expenses'" (click)="tab.set('expenses')">Gastos</button>
+          <button type="button" class="tab" [class.is-active]="tab() === 'incidents'" (click)="tab.set('incidents')">Novedades</button>
+        </div>
 
-    <ion-content class="ion-padding">
       @if (tab() === 'stops') {
         @if (!trip()) {
-          <div class="empty-state"><ion-spinner></ion-spinner></div>
+          <app-empty-state loading></app-empty-state>
         } @else {
           <p class="hint">
             Este viaje va de <strong>{{ trip()!.origin }}</strong> a <strong>{{ trip()!.destination }}</strong>{{ trip()!.stops.length ? ', pasando por:' : '.' }}
           </p>
 
           @if (trip()!.stops.length === 0) {
-            <p class="empty-state">Este viaje no tiene paradas intermedias planeadas.</p>
+            <app-empty-state text="Este viaje no tiene paradas intermedias planeadas."></app-empty-state>
           } @else {
-            <ion-list class="list-cards">
-              @for (s of trip()!.stops; track s.id) {
-                <ion-item lines="none" class="stop-item">
-                  <div slot="start" class="icon-avatar icon-avatar--tertiary">
-                    <ion-icon name="location-outline"></ion-icon>
-                  </div>
-                  <ion-label>
-                    <p class="stop-order">Parada {{ s.order }}</p>
-                    <h3>{{ s.city }}</h3>
-                    <p>
-                      <ion-icon name="people-outline"></ion-icon>
-                      {{ passengersAtStop(s.id).length }} pasajero(s) abordaron aquí
-                    </p>
-                  </ion-label>
-                  <ion-button
-                    slot="end" fill="outline" size="small"
-                    (click)="toggleAddForm(s.id)">
-                    <ion-icon name="person-add-outline" slot="start"></ion-icon>
-                    Agregar
-                  </ion-button>
-                </ion-item>
+            @for (s of trip()!.stops; track s.id) {
+              <div class="stop-card">
+                <div class="icon-avatar icon-avatar--tertiary">
+                  <ion-icon name="location-outline"></ion-icon>
+                </div>
+                <div class="stop-card__text">
+                  <div class="stop-order">Parada {{ s.order }}</div>
+                  <div class="stop-city">{{ s.city }}</div>
+                  <div class="stop-meta">{{ passengersAtStop(s.id).length }} pasajero(s) abordaron aquí</div>
+                </div>
+                <button type="button" class="btn btn--outline" (click)="toggleAddForm(s.id)">
+                  <ion-icon name="person-add-outline"></ion-icon>
+                  Agregar
+                </button>
+              </div>
 
-                @if (addingAtStopId() === s.id) {
-                  <div class="card-surface add-passenger-form">
-                    <ion-item fill="outline">
-                      <ion-label position="floating">Nombre</ion-label>
-                      <ion-input [(ngModel)]="newPassengerName" [name]="'name-'+s.id"></ion-input>
-                    </ion-item>
-                    <ion-item fill="outline" class="ion-margin-bottom">
-                      <ion-label position="floating">Documento</ion-label>
-                      <ion-input [(ngModel)]="newPassengerDocument" [name]="'doc-'+s.id"></ion-input>
-                    </ion-item>
-                    @if (addError()) {
-                      <p class="error-hint">{{ addError() }}</p>
+              @if (addingAtStopId() === s.id) {
+                <div class="card-surface add-passenger-form">
+                  <label class="field-label">Nombre</label>
+                  <input class="field-control field-gap" placeholder="Nombre del pasajero"
+                    [(ngModel)]="newPassengerName" [name]="'name-'+s.id" />
+                  <label class="field-label">Documento</label>
+                  <input class="field-control field-gap" placeholder="Número de documento"
+                    [(ngModel)]="newPassengerDocument" [name]="'doc-'+s.id" />
+                  @if (addError()) {
+                    <p class="field-error">{{ addError() }}</p>
+                  }
+                  <button type="button" class="btn btn--primary btn--block" (click)="addPassengerAtStop(s.id)" [disabled]="addingPassenger()">
+                    @if (addingPassenger()) { <ion-spinner name="dots"></ion-spinner> } @else {
+                      Guardar pasajero
                     }
-                    <ion-button expand="block" (click)="addPassengerAtStop(s.id)" [disabled]="addingPassenger()">
-                      @if (addingPassenger()) { <ion-spinner name="dots"></ion-spinner> } @else {
-                        <ion-icon name="person-add-outline" slot="start"></ion-icon> Guardar pasajero
-                      }
-                    </ion-button>
-                  </div>
-                }
+                  </button>
+                </div>
               }
-            </ion-list>
+            }
           }
         }
       } @else if (tab() === 'expenses') {
-        <div class="card-surface">
-          <ion-item fill="outline">
-            <ion-label position="floating">Tipo de gasto</ion-label>
-            <ion-select [(ngModel)]="expenseType">
-              <ion-select-option value="FUEL">Combustible extra</ion-select-option>
-              <ion-select-option value="TOLL">Peaje no previsto</ion-select-option>
-              <ion-select-option value="REPAIR">Reparación / desvare</ion-select-option>
-              <ion-select-option value="OTHER">Otro</ion-select-option>
-            </ion-select>
-          </ion-item>
-          <ion-item fill="outline">
-            <ion-label position="floating">Monto</ion-label>
-            <ion-input type="number" [(ngModel)]="expenseAmount"></ion-input>
-          </ion-item>
-          <ion-item fill="outline" class="ion-margin-bottom">
-            <ion-label position="floating">Concepto</ion-label>
-            <ion-input [(ngModel)]="expenseConcept"></ion-input>
-          </ion-item>
-          <ion-button expand="block" (click)="addExpense()" [disabled]="saving()">
-            <ion-icon name="add-outline" slot="start"></ion-icon> Registrar gasto
-          </ion-button>
+        <div class="card-surface form-card">
+          <label class="field-label" for="expense-type">Tipo de gasto</label>
+          <select id="expense-type" class="field-control field-gap" [(ngModel)]="expenseType">
+            <option value="FUEL">Combustible extra</option>
+            <option value="TOLL">Peaje no previsto</option>
+            <option value="REPAIR">Reparación / desvare</option>
+            <option value="OTHER">Otro</option>
+          </select>
+          <label class="field-label" for="expense-amount">Monto</label>
+          <input id="expense-amount" class="field-control field-gap" type="number" placeholder="$ 0" [(ngModel)]="expenseAmount" />
+          <label class="field-label" for="expense-concept">Concepto</label>
+          <input id="expense-concept" class="field-control field-gap" placeholder="Ej. tanqueo en Ibagué" [(ngModel)]="expenseConcept" />
+          <button type="button" class="btn btn--primary btn--block" (click)="addExpense()" [disabled]="saving()">
+            Registrar gasto
+          </button>
         </div>
 
-        <p class="section-title"><ion-icon name="cash-outline"></ion-icon> Historial de gastos</p>
+        <p class="list-heading">Historial de gastos</p>
         @if (expenses().length === 0) {
-          <p class="empty-state">Aún no hay gastos registrados.</p>
+          <app-empty-state text="Aún no hay gastos registrados."></app-empty-state>
         } @else {
-          <ion-list class="list-cards">
+          <div class="data-list">
             @for (e of expenses(); track e.id) {
-              <ion-item lines="none">
-                <div slot="start" class="icon-avatar icon-avatar--warning">
-                  <ion-icon name="cash-outline"></ion-icon>
+              <div class="data-row">
+                <div class="data-row__text">
+                  <div class="data-row__title">{{ expenseTypeLabel(e.type) }}</div>
+                  <div class="data-row__meta">{{ e.concept }}</div>
                 </div>
-                <ion-label><h3>{{ e.concept }}</h3><p>{{ e.type }}</p></ion-label>
-                <ion-badge slot="end" color="warning">{{ e.amount }}</ion-badge>
-              </ion-item>
+                <div class="amount">{{ e.amount | number:'1.0-0' }}</div>
+              </div>
             }
-          </ion-list>
+          </div>
         }
       } @else {
-        <div class="card-surface">
-          <ion-item fill="outline">
-            <ion-label position="floating">Tipo de novedad</ion-label>
-            <ion-select [(ngModel)]="incidentType">
-              <ion-select-option value="DELAY">Retraso</ion-select-option>
-              <ion-select-option value="PASSENGER_ISSUE">Problema con pasajeros</ion-select-option>
-              <ion-select-option value="DETOUR">Desvío</ion-select-option>
-              <ion-select-option value="OTHER">Otro</ion-select-option>
-            </ion-select>
-          </ion-item>
-          <ion-item fill="outline" class="ion-margin-bottom">
-            <ion-label position="floating">Descripción</ion-label>
-            <ion-textarea [(ngModel)]="incidentDescription" rows="3"></ion-textarea>
-          </ion-item>
-          <ion-button expand="block" (click)="addIncident()" [disabled]="saving()">
-            <ion-icon name="add-outline" slot="start"></ion-icon> Registrar novedad
-          </ion-button>
+        <div class="card-surface form-card">
+          <label class="field-label" for="incident-type">Tipo de novedad</label>
+          <select id="incident-type" class="field-control field-gap" [(ngModel)]="incidentType">
+            <option value="DELAY">Retraso</option>
+            <option value="PASSENGER_ISSUE">Problema con pasajeros</option>
+            <option value="DETOUR">Desvío</option>
+            <option value="OTHER">Otro</option>
+          </select>
+          <label class="field-label" for="incident-desc">Descripción</label>
+          <textarea id="incident-desc" class="field-control field-gap" rows="3"
+            placeholder="Describe lo ocurrido" [(ngModel)]="incidentDescription"></textarea>
+          <button type="button" class="btn btn--primary btn--block" (click)="addIncident()" [disabled]="saving()">
+            Registrar novedad
+          </button>
         </div>
 
-        <p class="section-title"><ion-icon name="alert-circle-outline"></ion-icon> Historial de novedades</p>
+        <p class="list-heading">Historial de novedades</p>
         @if (incidents().length === 0) {
-          <p class="empty-state">Aún no hay novedades reportadas.</p>
+          <app-empty-state text="Aún no hay novedades reportadas."></app-empty-state>
         } @else {
-          <ion-list class="list-cards">
+          <div class="data-list">
             @for (n of incidents(); track n.id) {
-              <ion-item lines="none">
-                <div slot="start" class="icon-avatar icon-avatar--danger">
-                  <ion-icon name="alert-circle-outline"></ion-icon>
+              <div class="data-row">
+                <div class="data-row__text">
+                  <div class="data-row__title">{{ incidentTypeLabel(n.type) }}</div>
+                  <div class="data-row__meta">{{ n.description }}</div>
                 </div>
-                <ion-label><h3>{{ n.type }}</h3><p>{{ n.description }}</p></ion-label>
-              </ion-item>
+              </div>
             }
-          </ion-list>
+          </div>
         }
       }
+      </app-phone-shell>
     </ion-content>
   `,
   styles: [`
+    /* Tabs planos con subrayado de acento, como en el mockup. */
+    .phone-shell__tabs {
+      display: flex;
+      gap: 6px;
+      padding: 12px 18px 0;
+      border-bottom: 1px solid var(--app-color-border);
+    }
+    .tab {
+      flex: 1;
+      border: none;
+      background: none;
+      padding: 10px 0;
+      font-family: inherit;
+      font-size: 0.8rem;
+      font-weight: 700;
+      cursor: pointer;
+      color: var(--app-color-text-muted);
+      border-bottom: 2px solid transparent;
+      margin-bottom: -1px;
+      transition: color var(--app-transition-fast), border-color var(--app-transition-fast);
+      &:hover { color: var(--app-color-text); }
+      &.is-active {
+        color: var(--app-color-primary);
+        border-bottom-color: var(--app-color-primary);
+      }
+    }
     .hint {
       color: var(--app-color-text-muted);
-      font-size: 0.88rem;
-      margin: 4px 0 var(--app-space-md);
+      font-size: 0.82rem;
+      margin: 0 0 14px;
+      strong { color: var(--app-color-text); }
     }
-    .stop-order { font-size: 0.72rem; color: var(--app-color-text-muted); margin: 0 0 2px; }
-    .stop-item p ion-icon { font-size: 13px; vertical-align: -2px; margin-right: 2px; }
-    .add-passenger-form { margin: 0 0 var(--app-space-md); }
-    .error-hint { color: var(--app-color-danger, #dc2626); font-size: 0.82rem; margin: 0 0 10px; }
+    .field-gap { margin-bottom: 12px; }
+    .form-card { margin-bottom: 18px; }
+
+    /* Fila de parada (mockup: icono + textos + botón "Agregar") */
+    .stop-card {
+      display: flex; align-items: center; gap: 12px;
+      background: var(--app-color-surface);
+      border: 1px solid var(--app-color-border);
+      border-radius: 12px;
+      padding: 12px 14px;
+      margin-bottom: 12px;
+    }
+    .stop-card__text { flex: 1; min-width: 0; }
+    .stop-order { font-size: 0.7rem; color: var(--app-color-text-subtle); }
+    .stop-city { font-size: 0.875rem; font-weight: 700; color: var(--app-color-text); }
+    .stop-meta { font-size: 0.75rem; color: var(--app-color-text-muted); }
+
+    .add-passenger-form { margin: 0 0 var(--app-space-md); padding: 16px; }
+
+    .list-heading {
+      font-size: 0.82rem;
+      font-weight: 700;
+      color: var(--app-color-text);
+      margin: 0 0 10px;
+    }
+    .amount { font-size: 0.85rem; font-weight: 700; flex-shrink: 0; }
   `],
 })
 export class EnRoutePage implements OnInit {
@@ -229,8 +255,8 @@ export class EnRoutePage implements OnInit {
     private tripsService: TripsService,
   ) {
     addIcons({
-      cashOutline, alertCircleOutline, addOutline, locationOutline,
-      personAddOutline, peopleOutline,
+      cashOutline, alertCircleOutline, locationOutline,
+      personAddOutline,
     });
   }
 
@@ -258,6 +284,15 @@ export class EnRoutePage implements OnInit {
 
   passengersAtStop(stopId: string): Passenger[] {
     return (this.trip()?.passengers || []).filter((p) => p.stopId === stopId);
+  }
+
+  /** El backend guarda códigos (FUEL, DELAY…); en la UI se muestran en español. */
+  expenseTypeLabel(type: ExpenseType): string {
+    return EXPENSE_TYPE_LABEL[type] ?? type;
+  }
+
+  incidentTypeLabel(type: IncidentType): string {
+    return INCIDENT_TYPE_LABEL[type] ?? type;
   }
 
   toggleAddForm(stopId: string) {

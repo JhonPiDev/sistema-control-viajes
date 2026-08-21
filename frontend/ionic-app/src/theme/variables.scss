@@ -29,9 +29,13 @@
   --app-color-secondary-contrast: #ffffff;
 
   --app-color-success: #16A34A;
+  --app-color-success-rgb: 22, 163, 74;
   --app-color-warning: #F59E0B;
+  --app-color-warning-rgb: 245, 158, 11;
   --app-color-danger: #EF4444;
+  --app-color-danger-rgb: 239, 68, 68;
   --app-color-info: #0891B2;
+  --app-color-info-rgb: 8, 145, 178;
 
   // Acentos extra para que la app no dependa solo del índigo — se usan en
   // iconos de tarjetas, avatares y el degradado "cálido" del lado conductor.
@@ -40,13 +44,14 @@
   --app-color-accent: #EC4899;
   --app-color-accent-rgb: 236, 72, 153;
 
-  --app-color-background: #F5F6FB;
+  --app-color-background: #F6F7FB;
   --app-color-surface: #FFFFFF;
   --app-color-surface-alt: #EEF0FA;
   --app-color-surface-raised: #FFFFFF;
-  --app-color-text: #12142B;
-  --app-color-text-muted: #666B85;
-  --app-color-border: #E5E7F2;
+  --app-color-text: #14162B;
+  --app-color-text-muted: #6B7089;
+  --app-color-text-subtle: #9498AD;
+  --app-color-border: #E7E8F2;
 
   // Degradados para fondos destacados (héroes, tarjetas, FAB). El "warm" se
   // usa del lado conductor para diferenciarlo visualmente del admin.
@@ -64,16 +69,19 @@
   --app-space-2xl: 48px;
 
   // ---- Tokens de forma ----
-  --app-radius-sm: 8px;
+  --app-radius-sm: 9px;
   --app-radius-md: 14px;
-  --app-radius-lg: 22px;
+  --app-radius-lg: 18px;
+  --app-radius-xl: 22px;
   --app-radius-full: 999px;
 
   // ---- Tokens de elevación (sombras) ----
-  --app-shadow-sm: 0 1px 2px rgba(18, 20, 43, 0.06), 0 1px 1px rgba(18, 20, 43, 0.04);
-  --app-shadow-md: 0 8px 24px rgba(18, 20, 43, 0.08), 0 2px 6px rgba(18, 20, 43, 0.05);
-  --app-shadow-lg: 0 20px 45px rgba(18, 20, 43, 0.14), 0 6px 14px rgba(18, 20, 43, 0.06);
-  --app-shadow-primary: 0 10px 24px rgba(var(--app-color-primary-rgb), 0.28);
+  // Aplanadas a propósito (look "flat" tipo mockup): casi sin difusión, solo
+  // el mínimo relieve para separar tarjetas del fondo.
+  --app-shadow-sm: 0 1px 2px rgba(18, 20, 43, 0.04);
+  --app-shadow-md: 0 4px 14px rgba(18, 20, 43, 0.06);
+  --app-shadow-lg: 0 10px 30px rgba(18, 20, 43, 0.08);
+  --app-shadow-primary: 0 6px 16px rgba(var(--app-color-primary-rgb), 0.22);
 
   // ---- Transiciones ----
   --app-transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
@@ -116,13 +124,14 @@
 
 /* ================= MODO OSCURO ================= */
 html.theme-dark {
-  --app-color-background: #0A0C16;
-  --app-color-surface: #151827;
-  --app-color-surface-alt: #1C2032;
-  --app-color-surface-raised: #1A1E30;
+  --app-color-background: #0B0C14;
+  --app-color-surface: #15161F;
+  --app-color-surface-alt: #1C1E2A;
+  --app-color-surface-raised: #1A1C28;
   --app-color-text: #F1F2F8;
   --app-color-text-muted: #9CA1BC;
-  --app-color-border: #292E45;
+  --app-color-text-subtle: #6C7290;
+  --app-color-border: #262838;
 
   --app-color-primary: #818CF8;
   --app-color-primary-rgb: 129, 140, 248;
@@ -137,10 +146,10 @@ html.theme-dark {
   --app-gradient-start: #4338CA;
   --app-gradient-end: #6D28D9;
 
-  --app-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.35);
-  --app-shadow-md: 0 10px 26px rgba(0, 0, 0, 0.45);
-  --app-shadow-lg: 0 24px 50px rgba(0, 0, 0, 0.55);
-  --app-shadow-primary: 0 10px 26px rgba(129, 140, 248, 0.35);
+  --app-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
+  --app-shadow-md: 0 4px 16px rgba(0, 0, 0, 0.35);
+  --app-shadow-lg: 0 10px 32px rgba(0, 0, 0, 0.45);
+  --app-shadow-primary: 0 6px 18px rgba(129, 140, 248, 0.3);
 
   --ion-color-primary: var(--app-color-primary);
   --ion-color-primary-rgb: var(--app-color-primary-rgb);
@@ -160,23 +169,13 @@ html.theme-dark {
   color-scheme: dark;
 }
 
-/* ================= TEMA PERSONALIZADO =================
-   El usuario elige un color primario desde el selector de
-   Ajustes; ThemeService inyecta --app-color-primary-custom
-   (y derivados) sobre <html>. El resto de la paleta hereda
-   del modo claro u oscuro que esté activo en ese momento. */
-html.theme-custom {
-  --app-color-primary: var(--app-color-primary-custom, #4F46E5);
-  --app-color-primary-shade: var(--app-color-primary-custom-shade, #4338CA);
-  --app-color-primary-tint: var(--app-color-primary-custom-tint, #6366F1);
-  --app-gradient-start: var(--app-color-primary-custom, #4F46E5);
-  --app-gradient-end: var(--app-color-primary-custom-tint, #6366F1);
-
-  --ion-color-primary: var(--app-color-primary);
-  --ion-color-primary-shade: var(--app-color-primary-shade);
-  --ion-color-primary-tint: var(--app-color-primary-tint);
-  --app-shadow-primary: 0 10px 24px rgba(var(--app-color-primary-rgb), 0.28);
-}
+/* ================= ACENTO PERSONALIZADO =================
+   No es un modo aparte: ThemeService escribe --app-color-primary
+   (y sus derivados -rgb/-shade/-tint/-contrast, más el degradado)
+   como estilos inline sobre <html>, así que el acento elegido pisa
+   al de esta hoja y se aplica tanto en claro como en oscuro.
+   Los valores de :root y html.theme-dark quedan como respaldo si
+   el script no llegara a correr. */
 
 body {
   background: var(--app-color-background);

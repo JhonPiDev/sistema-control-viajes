@@ -2,57 +2,68 @@ import { Component, OnDestroy, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import {
-  IonHeader, IonToolbar, IonTitle, IonContent, IonButtons, IonBackButton,
-  IonBadge, IonList, IonItem, IonLabel, IonIcon, IonSpinner, IonRefresher,
-  IonRefresherContent, IonChip, IonButton,
+  IonContent, IonIcon, IonRefresher,
+  IonRefresherContent, IonButton,
 } from '@ionic/angular/standalone';
 import { addIcons } from 'ionicons';
 import {
   personOutline, cashOutline, alertCircleOutline, checkmarkCircleOutline,
   closeCircleOutline, timeOutline, navigateOutline, personCircleOutline,
-  createOutline,
+  createOutline, arrowBackOutline,
 } from 'ionicons/icons';
 import { TripsService } from '../../../core/services/trips.service';
 import { ExpensesService } from '../../../core/services/expenses.service';
 import { IncidentsService } from '../../../core/services/incidents.service';
-import { Trip, Expense, Incident, Passenger } from '../../../core/models/models';
+import { Trip, Expense, ExpenseType, Incident, IncidentType } from '../../../core/models/models';
+import { AdminPageComponent } from '../../../shared/components/admin-page.component';
+import { StatusPillComponent } from '../../../shared/components/status-pill.component';
+import { EmptyStateComponent } from '../../../shared/components/empty-state.component';
+
+const EXPENSE_TYPE_LABEL: Record<ExpenseType, string> = {
+  FUEL: 'Combustible extra',
+  TOLL: 'Peaje no previsto',
+  REPAIR: 'Reparación / desvare',
+  OTHER: 'Otro',
+};
+
+const INCIDENT_TYPE_LABEL: Record<IncidentType, string> = {
+  DELAY: 'Retraso',
+  PASSENGER_ISSUE: 'Problema con pasajeros',
+  DETOUR: 'Desvío',
+  OTHER: 'Otro',
+};
 
 @Component({
   selector: 'app-trip-detail',
   standalone: true,
   imports: [
-    CommonModule, RouterLink, IonHeader, IonToolbar, IonTitle, IonContent, IonButtons,
-    IonBackButton, IonBadge, IonList, IonItem, IonLabel, IonIcon, IonSpinner,
-    IonRefresher, IonRefresherContent, IonChip, IonButton,
+    CommonModule, RouterLink, IonContent, IonIcon, IonButton,
+    IonRefresher, IonRefresherContent, AdminPageComponent, StatusPillComponent,
+    EmptyStateComponent,
   ],
   template: `
-    <ion-header>
-      <ion-toolbar>
-        <ion-buttons slot="start"><ion-back-button defaultHref="/admin/dashboard"></ion-back-button></ion-buttons>
-        <ion-title>{{ trip()?.name || 'Viaje' }}</ion-title>
-        @if (trip()?.status === 'PENDING') {
-          <ion-buttons slot="end">
-            <ion-button [routerLink]="['/admin/trips', trip()!.id, 'edit']">
-              <ion-icon slot="icon-only" name="create-outline"></ion-icon>
-            </ion-button>
-          </ion-buttons>
-        }
-      </ion-toolbar>
-    </ion-header>
-
     <ion-content>
       <ion-refresher slot="fixed" (ionRefresh)="doRefresh($event)">
         <ion-refresher-content></ion-refresher-content>
       </ion-refresher>
 
-      <div class="ion-page-desktop ion-padding">
+      <app-admin-page
+        [title]="trip()?.name || 'Viaje'"
+        subtitle="Detalle del viaje"
+        backLink="/admin/dashboard"
+        [maxWidth]="840">
+        @if (trip()?.status === 'PENDING') {
+          <ion-button pageActions fill="outline" [routerLink]="['/admin/trips', trip()!.id, 'edit']">
+            <ion-icon slot="start" name="create-outline"></ion-icon>
+            Editar
+          </ion-button>
+        }
+
         @if (!trip()) {
-          <div class="empty-state"><ion-spinner></ion-spinner></div>
+          <app-empty-state loading></app-empty-state>
         } @else {
           <div class="hero-card">
-            <ion-chip [color]="statusColor()" style="--background:rgba(255,255,255,.18); color:#fff; font-weight:700;">
-              {{ statusLabel() }}
-            </ion-chip>
+            <span class="hero-badge">{{ statusLabel() }}</span>
             <h2 class="hero-title">{{ trip()!.name }}</h2>
             <p class="hero-route">
               <ion-icon name="navigate-outline"></ion-icon>
@@ -66,104 +77,117 @@ import { Trip, Expense, Incident, Passenger } from '../../../core/models/models'
             </p>
           </div>
 
-          <div class="card-surface ion-margin-top">
-            <p class="section-title">
-              <ion-icon name="person-outline"></ion-icon>
-              Pasajeros ({{ trip()!.passengers.length }})
-            </p>
-            <ion-list class="list-cards">
-              @for (p of trip()!.passengers; track p.id) {
-                <ion-item lines="none">
-                  <div slot="start" class="icon-avatar" [class]="'icon-avatar--' + (p.boardingStatus === 'BOARDED' ? 'success' : p.boardingStatus === 'ABSENT' ? 'danger' : 'medium')">
-                    <ion-icon [name]="p.boardingStatus === 'BOARDED' ? 'checkmark-circle-outline' : p.boardingStatus === 'ABSENT' ? 'close-circle-outline' : 'time-outline'"></ion-icon>
-                  </div>
-                  <ion-label>
-                    <h3>{{ p.name }}</h3>
-                    <p>{{ p.document }}</p>
-                    <p>{{ boardingLabel(p) }}</p>
-                  </ion-label>
-                </ion-item>
-              }
-            </ion-list>
+          <p class="list-heading">Pasajeros ({{ trip()!.passengers.length }})</p>
+          <div class="data-list section-block">
+            @for (p of trip()!.passengers; track p.id) {
+              <div class="data-row">
+                <div class="icon-avatar" [class]="'icon-avatar icon-avatar--' + (p.boardingStatus === 'BOARDED' ? 'success' : p.boardingStatus === 'ABSENT' ? 'danger' : 'medium')">
+                  <ion-icon [name]="p.boardingStatus === 'BOARDED' ? 'checkmark-circle-outline' : p.boardingStatus === 'ABSENT' ? 'close-circle-outline' : 'time-outline'"></ion-icon>
+                </div>
+                <div class="data-row__text">
+                  <div class="data-row__title">{{ p.name }}</div>
+                  <div class="data-row__meta">{{ p.document }}</div>
+                </div>
+                <app-status-pill [boarding]="p"></app-status-pill>
+              </div>
+            }
           </div>
 
           @if (trip()!.signatureData) {
-            <div class="card-surface ion-margin-top">
-              <p class="section-title"><ion-icon name="create-outline"></ion-icon> Firma del despachador/cliente</p>
-              <div class="signature-frame">
-                <img [src]="trip()!.signatureData" alt="Firma digital" />
-              </div>
+            <p class="list-heading">Firma del despachador/cliente</p>
+            <div class="card-surface section-block signature-card">
+              <img [src]="trip()!.signatureData" alt="Firma digital" />
             </div>
           }
 
-          <div class="card-surface ion-margin-top">
-            <p class="section-title"><ion-icon name="cash-outline"></ion-icon> Gastos reportados</p>
+          <p class="list-heading">Gastos reportados</p>
+          <div class="section-block">
             @if (expenses().length === 0) {
-              <p class="empty-state">Sin gastos reportados aún.</p>
+              <app-empty-state variant="card" text="Sin gastos reportados aún."></app-empty-state>
             } @else {
-              <ion-list class="list-cards">
+              <div class="data-list">
                 @for (e of expenses(); track e.id) {
-                  <ion-item lines="none">
-                    <div slot="start" class="icon-avatar icon-avatar--warning">
+                  <div class="data-row">
+                    <div class="icon-avatar icon-avatar--warning">
                       <ion-icon name="cash-outline"></ion-icon>
                     </div>
-                    <ion-label>
-                      <h3>{{ e.concept }}</h3>
-                      <p>{{ e.type }}</p>
-                    </ion-label>
-                    <ion-badge slot="end" color="warning">{{ e.amount | number:'1.0-0' }}</ion-badge>
-                  </ion-item>
+                    <div class="data-row__text">
+                      <div class="data-row__title">{{ expenseTypeLabel(e.type) }}</div>
+                      <div class="data-row__meta">{{ e.concept }}</div>
+                    </div>
+                    <div class="amount">{{ e.amount | number:'1.0-0' }}</div>
+                  </div>
                 }
-              </ion-list>
+              </div>
             }
           </div>
 
-          <div class="card-surface ion-margin-top">
-            <p class="section-title"><ion-icon name="alert-circle-outline"></ion-icon> Novedades</p>
+          <p class="list-heading">Novedades</p>
+          <div class="section-block">
             @if (incidents().length === 0) {
-              <p class="empty-state">Sin novedades reportadas aún.</p>
+              <app-empty-state variant="card" text="Sin novedades reportadas aún."></app-empty-state>
             } @else {
-              <ion-list class="list-cards">
+              <div class="data-list">
                 @for (n of incidents(); track n.id) {
-                  <ion-item lines="none">
-                    <div slot="start" class="icon-avatar icon-avatar--danger">
+                  <div class="data-row">
+                    <div class="icon-avatar icon-avatar--danger">
                       <ion-icon name="alert-circle-outline"></ion-icon>
                     </div>
-                    <ion-label>
-                      <h3>{{ n.type }}</h3>
-                      <p>{{ n.description }}</p>
-                    </ion-label>
-                  </ion-item>
+                    <div class="data-row__text">
+                      <div class="data-row__title">{{ incidentTypeLabel(n.type) }}</div>
+                      <div class="data-row__meta">{{ n.description }}</div>
+                    </div>
+                  </div>
                 }
-              </ion-list>
+              </div>
             }
           </div>
         }
-      </div>
+      </app-admin-page>
     </ion-content>
   `,
   styles: [`
+    .hero-badge {
+      display: inline-block;
+      background: rgba(255, 255, 255, .2);
+      padding: 4px 10px;
+      border-radius: var(--app-radius-full);
+      font-size: 0.7rem;
+      font-weight: 700;
+    }
     .hero-title {
       font-family: var(--app-font-family-heading);
-      font-size: 1.4rem;
+      font-size: 1.2rem;
       font-weight: 800;
       margin: 10px 0 6px;
     }
     .hero-route, .hero-driver {
       display: flex; align-items: center; gap: 6px;
       margin: 4px 0;
-      opacity: 0.95;
-      font-size: 0.92rem;
+      opacity: 0.9;
+      font-size: 0.85rem;
     }
-    .signature-frame {
+    .list-heading {
+      font-size: 0.82rem;
+      font-weight: 700;
+      color: var(--app-color-text);
+      margin: var(--app-space-lg) 0 10px;
+    }
+    .section-block { margin-bottom: 4px; }
+    .signature-card {
       background: #fff;
-      border: 1px solid var(--app-color-border);
-      border-radius: var(--app-radius-md);
-      padding: 10px;
       display: flex;
       justify-content: center;
+      padding: 14px;
       img { max-width: 100%; max-height: 160px; }
     }
+    .empty-card {
+      text-align: center;
+      color: var(--app-color-text-subtle);
+      font-size: 0.82rem;
+      padding: 18px;
+    }
+    .amount { font-size: 0.85rem; font-weight: 700; flex-shrink: 0; }
   `],
 })
 export class TripDetailPage implements OnDestroy {
@@ -187,7 +211,7 @@ export class TripDetailPage implements OnDestroy {
     addIcons({
       personOutline, cashOutline, alertCircleOutline, checkmarkCircleOutline,
       closeCircleOutline, timeOutline, navigateOutline, personCircleOutline,
-      createOutline,
+      createOutline, arrowBackOutline,
     });
   }
 
@@ -224,22 +248,18 @@ export class TripDetailPage implements OnDestroy {
     this.incidents.set(incidents);
   }
 
-  boardingLabel(p: Passenger): string {
-    if (p.boardingStatus === 'BOARDED') {
-      return p.stop ? `Abordó en parada: ${p.stop.city}` : 'Abordó en el origen';
-    }
-    if (p.boardingStatus === 'ABSENT') return 'No se presentó';
-    return p.stop ? `Pendiente · sube en parada: ${p.stop.city}` : 'Pendiente en el origen';
+  /** El backend guarda códigos (FUEL, DELAY…); en la UI se muestran en español. */
+  expenseTypeLabel(type: ExpenseType): string {
+    return EXPENSE_TYPE_LABEL[type] ?? type;
+  }
+
+  incidentTypeLabel(type: IncidentType): string {
+    return INCIDENT_TYPE_LABEL[type] ?? type;
   }
 
   statusLabel() {
     const s = this.trip()?.status;
     return s === 'PENDING' ? 'Pendiente' : s === 'IN_PROGRESS' ? 'En ruta' : 'Finalizado';
-  }
-
-  statusColor() {
-    const s = this.trip()?.status;
-    return s === 'PENDING' ? 'medium' : s === 'IN_PROGRESS' ? 'warning' : 'success';
   }
 
   async doRefresh(ev: CustomEvent) {

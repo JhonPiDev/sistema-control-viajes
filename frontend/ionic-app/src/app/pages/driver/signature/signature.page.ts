@@ -2,30 +2,22 @@ import { Component, ElementRef, OnDestroy, OnInit, ViewChild, signal } from '@an
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router } from '@angular/router';
 import {
-  IonHeader, IonToolbar, IonTitle, IonContent, IonButtons, IonBackButton,
-  IonButton, IonIcon, IonText, IonSpinner,
+  IonContent,
+  IonIcon, IonSpinner,
 } from '@ionic/angular/standalone';
 import { addIcons } from 'ionicons';
-import { refreshOutline, saveOutline, informationCircleOutline } from 'ionicons/icons';
+import { refreshOutline, informationCircleOutline } from 'ionicons/icons';
 import SignaturePad from 'signature_pad';
 import { TripsService } from '../../../core/services/trips.service';
+import { PhoneShellComponent } from '../../../shared/components/phone-shell.component';
 
 @Component({
   selector: 'app-signature',
   standalone: true,
-  imports: [
-    CommonModule, IonHeader, IonToolbar, IonTitle, IonContent, IonButtons,
-    IonBackButton, IonButton, IonIcon, IonText, IonSpinner,
-  ],
+  imports: [CommonModule, IonContent, IonIcon, IonSpinner, PhoneShellComponent],
   template: `
-    <ion-header>
-      <ion-toolbar>
-        <ion-buttons slot="start"><ion-back-button defaultHref="/driver/my-trip"></ion-back-button></ion-buttons>
-        <ion-title>Firma Digital</ion-title>
-      </ion-toolbar>
-    </ion-header>
-
-    <ion-content class="ion-padding">
+    <ion-content>
+      <app-phone-shell title="Firma digital" backLink="/driver/my-trip">
       <div class="hint-banner">
         <ion-icon name="information-circle-outline"></ion-icon>
         <span>Pide al despachador o cliente que firme en el recuadro para poder habilitar el arranque del viaje.</span>
@@ -37,20 +29,21 @@ import { TripsService } from '../../../core/services/trips.service';
       </div>
 
       <div class="actions">
-        <ion-button fill="outline" (click)="clear()">
-          <ion-icon name="refresh-outline" slot="start"></ion-icon>
+        <button type="button" class="btn btn--ghost" (click)="clear()">
+          <ion-icon name="refresh-outline"></ion-icon>
           Limpiar
-        </ion-button>
-        <ion-button (click)="save()" [disabled]="saving()">
+        </button>
+        <button type="button" class="btn btn--primary" (click)="save()" [disabled]="saving()">
           @if (saving()) { <ion-spinner name="dots"></ion-spinner> } @else {
-            <ion-icon name="save-outline" slot="start"></ion-icon> Guardar firma
+            Guardar firma
           }
-        </ion-button>
+        </button>
       </div>
 
       @if (error()) {
-        <ion-text color="danger"><p class="error-msg">{{ error() }}</p></ion-text>
+        <p class="field-error error-msg">{{ error() }}</p>
       }
+      </app-phone-shell>
     </ion-content>
   `,
   styles: [`
@@ -82,8 +75,8 @@ import { TripsService } from '../../../core/services/trips.service';
       background: var(--app-color-border);
     }
     .actions { display: flex; gap: 12px; }
-    .actions ion-button { flex: 1; }
-    .error-msg { font-size: 0.85rem; margin: 10px 0 0; text-align: center; }
+    .actions .btn { flex: 1; }
+    .error-msg { margin: 10px 0 0; text-align: center; }
   `],
 })
 export class SignaturePage implements OnInit, OnDestroy {
@@ -100,7 +93,7 @@ export class SignaturePage implements OnInit, OnDestroy {
     private tripsService: TripsService,
     private router: Router,
   ) {
-    addIcons({ refreshOutline, saveOutline, informationCircleOutline });
+    addIcons({ refreshOutline, informationCircleOutline });
   }
 
   ngOnInit() {

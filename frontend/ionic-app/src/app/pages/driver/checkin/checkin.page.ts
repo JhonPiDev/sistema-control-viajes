@@ -2,37 +2,25 @@ import { Component, OnDestroy, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router } from '@angular/router';
 import {
-  IonHeader, IonToolbar, IonTitle, IonContent, IonButtons, IonButton,
-  IonList, IonItem, IonLabel, IonIcon, IonSpinner, IonBadge,
+  IonContent, IonIcon, IonSpinner,
   AlertController, ToastController, Platform,
 } from '@ionic/angular/standalone';
 import { addIcons } from 'ionicons';
 import { checkmarkOutline, closeOutline, personOutline, arrowBackOutline } from 'ionicons/icons';
 import { PassengersService } from '../../../core/services/passengers.service';
 import { Passenger, BoardingStatus } from '../../../core/models/models';
+import { PhoneShellComponent } from '../../../shared/components/phone-shell.component';
+import { EmptyStateComponent } from '../../../shared/components/empty-state.component';
 
 @Component({
   selector: 'app-checkin',
   standalone: true,
-  imports: [
-    CommonModule, IonHeader, IonToolbar, IonTitle, IonContent, IonButtons,
-    IonButton, IonList, IonItem, IonLabel, IonIcon, IonSpinner, IonBadge,
-  ],
+  imports: [CommonModule, IonContent, IonIcon, PhoneShellComponent, EmptyStateComponent],
   template: `
-    <ion-header>
-      <ion-toolbar>
-        <ion-buttons slot="start">
-          <ion-button (click)="attemptLeave()">
-            <ion-icon slot="icon-only" name="arrow-back-outline"></ion-icon>
-          </ion-button>
-        </ion-buttons>
-        <ion-title>Check-in de Pasajeros</ion-title>
-      </ion-toolbar>
-    </ion-header>
-
-    <ion-content class="ion-padding">
+    <ion-content>
+      <app-phone-shell title="Check-in de pasajeros" (back)="attemptLeave()">
       @if (loading()) {
-        <div class="empty-state"><ion-spinner></ion-spinner></div>
+        <app-empty-state loading></app-empty-state>
       } @else {
         @if (pendingCount() > 0) {
           <p class="hint">Marca a todos los pasajeros (abordó o no se presentó) para volver a Mi Viaje.</p>
@@ -43,38 +31,100 @@ import { Passenger, BoardingStatus } from '../../../core/models/models';
           <span class="stat-chip stat-chip--medium"><ion-icon name="person-outline"></ion-icon>{{ pendingCount() }} pendientes</span>
         </div>
 
-        <ion-list class="list-cards">
-          @for (p of passengers(); track p.id) {
-            <ion-item lines="none">
-              <div slot="start" class="icon-avatar" [class]="'icon-avatar--' + (p.boardingStatus === 'BOARDED' ? 'success' : p.boardingStatus === 'ABSENT' ? 'danger' : 'medium')">
-                <ion-icon name="person-outline"></ion-icon>
+        @for (p of passengers(); track p.id) {
+          <div class="passenger-card">
+            <div class="passenger-avatar">
+              <ion-icon name="person-outline"></ion-icon>
+            </div>
+            <div class="passenger-text">
+              <div class="passenger-name">{{ p.name }}</div>
+              <div class="passenger-doc">{{ p.document }}</div>
+              <div class="passenger-status" [class]="'passenger-status is-' + p.boardingStatus.toLowerCase()">
+                {{ label(p.boardingStatus) }} · {{ p.stop?.city ? 'Aborda en ' + p.stop!.city : 'Aborda en el origen' }}
               </div>
-              <ion-label>
-                <h3>{{ p.name }}</h3>
-                <p>{{ p.document }}</p>
-                <p><strong>{{ label(p.boardingStatus) }}</strong> · {{ p.stop?.city ? 'Aborda en ' + p.stop!.city : 'Aborda en el origen' }}</p>
-              </ion-label>
-              <ion-button
-                slot="end" fill="solid" color="success" size="small"
-                (click)="setStatus(p, 'BOARDED')">
-                <ion-icon name="checkmark-outline" slot="icon-only"></ion-icon>
-              </ion-button>
-              <ion-button
-                slot="end" fill="outline" color="danger" size="small"
-                (click)="setStatus(p, 'ABSENT')">
-                <ion-icon name="close-outline" slot="icon-only"></ion-icon>
-              </ion-button>
-            </ion-item>
-          }
-        </ion-list>
+            </div>
+            <button
+              type="button"
+              class="round-btn round-btn--board"
+              [class.is-on]="p.boardingStatus === 'BOARDED'"
+              (click)="setStatus(p, 'BOARDED')"
+              aria-label="Marcar como abordó">
+              <ion-icon name="checkmark-outline"></ion-icon>
+            </button>
+            <button
+              type="button"
+              class="round-btn round-btn--absent"
+              [class.is-on]="p.boardingStatus === 'ABSENT'"
+              (click)="setStatus(p, 'ABSENT')"
+              aria-label="Marcar como no se presentó">
+              <ion-icon name="close-outline"></ion-icon>
+            </button>
+          </div>
+        }
       }
+      </app-phone-shell>
     </ion-content>
   `,
   styles: [`
     .hint {
       color: var(--app-color-text-muted);
-      font-size: 0.85rem;
-      margin: 0 0 var(--app-space-md);
+      font-size: 0.8rem;
+      margin: 0 0 14px;
+    }
+
+    /* Tarjeta de pasajero del mockup: avatar + datos + 2 botones redondos */
+    .passenger-card {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      background: var(--app-color-surface);
+      border: 1px solid var(--app-color-border);
+      border-radius: 12px;
+      padding: 12px 14px;
+      margin-bottom: 10px;
+    }
+    .passenger-avatar {
+      width: 36px; height: 36px;
+      flex-shrink: 0;
+      border-radius: 50%;
+      background: var(--app-color-background);
+      color: var(--app-color-text-subtle);
+      display: flex; align-items: center; justify-content: center;
+      ion-icon { font-size: 17px; }
+    }
+    .passenger-text { flex: 1; min-width: 0; }
+    .passenger-name { font-size: 0.875rem; font-weight: 700; }
+    .passenger-doc { font-size: 0.75rem; color: var(--app-color-text-subtle); }
+    .passenger-status {
+      font-size: 0.72rem;
+      font-weight: 600;
+      margin-top: 2px;
+      color: var(--app-color-text-muted);
+      &.is-boarded { color: var(--app-color-success); }
+      &.is-absent { color: var(--app-color-danger); }
+    }
+
+    .round-btn {
+      width: 38px; height: 38px;
+      flex-shrink: 0;
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer;
+      border: 1px solid transparent;
+      transition: background var(--app-transition-fast), border-color var(--app-transition-fast);
+      ion-icon { font-size: 17px; }
+    }
+    /* Sin marcar quedan tenues; al marcarlos toman su color pleno. */
+    .round-btn--board {
+      background: rgba(var(--app-color-success-rgb), .12);
+      color: var(--app-color-success);
+      &.is-on { background: var(--app-color-success); color: #fff; }
+    }
+    .round-btn--absent {
+      background: var(--app-color-surface);
+      border-color: rgba(var(--app-color-danger-rgb), .45);
+      color: var(--app-color-danger);
+      &.is-on { background: var(--app-color-danger); border-color: var(--app-color-danger); color: #fff; }
     }
   `],
 })

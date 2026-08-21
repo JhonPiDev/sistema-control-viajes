@@ -2,183 +2,134 @@ import { Component, OnDestroy, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import {
-  IonHeader, IonToolbar, IonTitle, IonContent, IonButtons, IonButton, IonIcon,
-  IonList, IonItem, IonLabel, IonBadge, IonSegment, IonSegmentButton, IonRefresher,
-  IonRefresherContent, IonSpinner, IonFab, IonFabButton, IonAvatar, AlertController,
+  IonContent, IonButton, IonIcon, IonRefresher,
+  IonRefresherContent, IonSpinner, AlertController,
 } from '@ionic/angular/standalone';
 import { addIcons } from 'ionicons';
 import {
-  addOutline, settingsOutline, peopleOutline, cashOutline, busOutline,
-  checkmarkDoneCircleOutline, timeOutline, chevronForwardOutline, trashOutline,
+  addOutline, busOutline, chevronForwardOutline, trashOutline,
   chevronBackOutline, createOutline, addCircleOutline, personAddOutline,
 } from 'ionicons/icons';
 import { TripsService } from '../../../core/services/trips.service';
 import { AuthService } from '../../../core/services/auth.service';
-import { Trip, TripStats, TripStatus } from '../../../core/models/models';
+import { Trip, TripStats } from '../../../core/models/models';
+import { AdminPageComponent } from '../../../shared/components/admin-page.component';
+import { StatCardComponent } from '../../../shared/components/stat-card.component';
+import { StatusPillComponent } from '../../../shared/components/status-pill.component';
+import { EmptyStateComponent } from '../../../shared/components/empty-state.component';
 
 const PAGE_SIZE = 10;
-
-const STATUS_LABEL: Record<TripStatus, string> = {
-  PENDING: 'Pendiente',
-  IN_PROGRESS: 'En ruta',
-  FINISHED: 'Finalizado',
-};
-const STATUS_COLOR: Record<TripStatus, string> = {
-  PENDING: 'medium',
-  IN_PROGRESS: 'warning',
-  FINISHED: 'success',
-};
 
 @Component({
   selector: 'app-dashboard',
   standalone: true,
   imports: [
-    CommonModule, RouterLink, IonHeader, IonToolbar, IonTitle, IonContent,
-    IonButtons, IonButton, IonIcon, IonList, IonItem, IonLabel, IonBadge,
-    IonSegment, IonSegmentButton, IonRefresher, IonRefresherContent, IonSpinner,
-    IonFab, IonFabButton, IonAvatar,
+    CommonModule, RouterLink, IonContent, IonButton, IonIcon,
+    IonRefresher, IonRefresherContent, AdminPageComponent, StatCardComponent,
+    StatusPillComponent, EmptyStateComponent,
   ],
   template: `
-    <ion-header>
-      <ion-toolbar>
-        <ion-title>Panel del Administrador</ion-title>
-        <ion-buttons slot="end">
-          <ion-button routerLink="/admin/drivers">
-            <ion-icon slot="icon-only" name="people-outline"></ion-icon>
-          </ion-button>
-          <ion-button routerLink="/admin/settings">
-            <ion-icon slot="icon-only" name="settings-outline"></ion-icon>
-          </ion-button>
-        </ion-buttons>
-      </ion-toolbar>
-    </ion-header>
-
     <ion-content>
       <ion-refresher slot="fixed" (ionRefresh)="doRefresh($event)">
         <ion-refresher-content></ion-refresher-content>
       </ion-refresher>
 
-      <div class="ion-page-desktop ion-padding">
+      <app-admin-page title="Resumen" subtitle="Estado general de la operación">
+        <button pageActions type="button" class="btn btn--primary" routerLink="/admin/trips/new">
+          <ion-icon name="add-outline"></ion-icon>
+          Nuevo viaje
+        </button>
+
         @if (stats() === null) {
-          <div class="empty-state"><ion-spinner></ion-spinner></div>
+          <app-empty-state loading></app-empty-state>
         } @else if (stats()!.total === 0) {
           <!-- Sin ningún viaje todavía (instalación nueva / recién limpiada):
                en vez del panel normal, dos accesos directos grandes para
                arrancar — crear el primer viaje o dar de alta un conductor. -->
           <div class="onboarding-row">
             <a class="onboarding-card" routerLink="/admin/trips/new">
-              <ion-icon name="add-circle-outline"></ion-icon>
+              <div class="onboarding-card__icon">
+                <ion-icon name="add-circle-outline"></ion-icon>
+              </div>
               <h2>Crear viaje</h2>
               <p>Registra el primer viaje: origen, destino, conductor y paradas.</p>
             </a>
             <a class="onboarding-card" routerLink="/admin/drivers">
-              <ion-icon name="person-add-outline"></ion-icon>
+              <div class="onboarding-card__icon">
+                <ion-icon name="person-add-outline"></ion-icon>
+              </div>
               <h2>Crear conductor</h2>
               <p>Da de alta al conductor que va a manejar los viajes.</p>
             </a>
           </div>
         } @else {
           <div class="stat-grid">
-            <div class="stat-card">
-              <div class="stat-icon icon-avatar--primary">
-                <ion-icon name="bus-outline"></ion-icon>
-              </div>
-              <span class="stat-value">{{ stats()?.total ?? 0 }}</span>
-              <span class="stat-label">Viajes totales</span>
-            </div>
-            <div class="stat-card">
-              <div class="stat-icon icon-avatar--warning">
-                <ion-icon name="time-outline"></ion-icon>
-              </div>
-              <span class="stat-value">{{ stats()?.byStatus?.IN_PROGRESS ?? 0 }}</span>
-              <span class="stat-label">En ruta</span>
-            </div>
-            <div class="stat-card">
-              <div class="stat-icon icon-avatar--success">
-                <ion-icon name="checkmark-done-circle-outline"></ion-icon>
-              </div>
-              <span class="stat-value">{{ stats()?.byStatus?.FINISHED ?? 0 }}</span>
-              <span class="stat-label">Finalizados</span>
-            </div>
-            <div class="stat-card">
-              <div class="stat-icon icon-avatar--accent">
-                <ion-icon name="people-outline"></ion-icon>
-              </div>
-              <span class="stat-value">{{ stats()?.passengersTotal ?? 0 }}</span>
-              <span class="stat-label">Pasajeros</span>
-            </div>
+            <app-stat-card [value]="stats()?.total ?? 0" label="Viajes totales"></app-stat-card>
+            <app-stat-card [value]="stats()?.byStatus?.PENDING ?? 0" label="Pendientes" tone="warning"></app-stat-card>
+            <app-stat-card [value]="stats()?.byStatus?.IN_PROGRESS ?? 0" label="En ruta" tone="info"></app-stat-card>
+            <app-stat-card [value]="stats()?.byStatus?.FINISHED ?? 0" label="Finalizados" tone="success"></app-stat-card>
           </div>
 
-          <ion-segment [value]="statusFilter()" (ionChange)="onFilterChange($event)">
-            <ion-segment-button value="">Todos</ion-segment-button>
-            <ion-segment-button value="PENDING">Pendientes</ion-segment-button>
-            <ion-segment-button value="IN_PROGRESS">En ruta</ion-segment-button>
-            <ion-segment-button value="FINISHED">Finalizados</ion-segment-button>
-          </ion-segment>
+          <div class="filter-bar">
+            <button type="button" class="filter-pill" [class.is-active]="statusFilter() === ''" (click)="setFilter('')">Todos</button>
+            <button type="button" class="filter-pill" [class.is-active]="statusFilter() === 'PENDING'" (click)="setFilter('PENDING')">Pendientes</button>
+            <button type="button" class="filter-pill" [class.is-active]="statusFilter() === 'IN_PROGRESS'" (click)="setFilter('IN_PROGRESS')">En ruta</button>
+            <button type="button" class="filter-pill" [class.is-active]="statusFilter() === 'FINISHED'" (click)="setFilter('FINISHED')">Finalizados</button>
+          </div>
 
           @if (trips.loading()) {
-            <div class="empty-state"><ion-spinner></ion-spinner></div>
+            <app-empty-state loading></app-empty-state>
           } @else if (trips.trips().length === 0) {
-            <div class="empty-state">
-              <ion-icon name="bus-outline"></ion-icon>
-              <p>No hay viajes registrados con este filtro.</p>
-            </div>
+            <app-empty-state icon="bus-outline" text="No hay viajes registrados con este filtro."></app-empty-state>
           } @else {
-            <ion-list class="list-cards ion-margin-top">
+            <div class="data-list">
               @for (trip of trips.trips(); track trip.id) {
-                <ion-item lines="none">
-                  <ion-avatar slot="start" class="trip-avatar" [style.background]="avatarBg(trip.status)">
+                <div class="data-row">
+                  <div class="trip-icon">
                     <ion-icon name="bus-outline"></ion-icon>
-                  </ion-avatar>
-                  <ion-label [routerLink]="['/admin/trips', trip.id]" style="cursor:pointer;">
-                    <h2>{{ trip.name }}</h2>
-                    <p>{{ trip.origin }} → {{ trip.destination }}</p>
-                    <p>Conductor: {{ trip.driver?.name }} · {{ trip.passengers.length }} pasajeros</p>
-                  </ion-label>
-                  <div slot="end" class="trip-end">
-                    <ion-badge [color]="STATUS_COLOR[trip.status]">{{ STATUS_LABEL[trip.status] }}</ion-badge>
-                    <div class="trip-actions">
-                      @if (trip.status === 'PENDING') {
-                        <ion-button fill="clear" size="small" [routerLink]="['/admin/trips', trip.id, 'edit']" (click)="$event.stopPropagation()">
-                          <ion-icon name="create-outline" slot="icon-only"></ion-icon>
-                        </ion-button>
-                      } @else if (trip.status === 'FINISHED') {
-                        <ion-button fill="clear" color="danger" size="small" (click)="confirmDelete(trip, $event)">
-                          <ion-icon name="trash-outline" slot="icon-only"></ion-icon>
-                        </ion-button>
-                      }
-                      <ion-icon
-                        name="chevron-forward-outline" class="chev"
-                        [routerLink]="['/admin/trips', trip.id]" style="cursor:pointer;">
-                      </ion-icon>
+                  </div>
+                  <div class="data-row__text trip-link" [routerLink]="['/admin/trips', trip.id]">
+                    <div class="data-row__title">{{ trip.origin }} – {{ trip.destination }}</div>
+                    <div class="data-row__meta">
+                      Conductor: {{ trip.driver?.name }} · {{ trip.passengers.length }} pasajeros
                     </div>
                   </div>
-                </ion-item>
+                  <div class="data-row__actions">
+                    @if (trip.status === 'PENDING') {
+                      <ion-button fill="clear" size="small" [routerLink]="['/admin/trips', trip.id, 'edit']" (click)="$event.stopPropagation()">
+                        <ion-icon name="create-outline" slot="icon-only"></ion-icon>
+                      </ion-button>
+                    } @else if (trip.status === 'FINISHED') {
+                      <ion-button fill="clear" color="danger" size="small" (click)="confirmDelete(trip, $event)">
+                        <ion-icon name="trash-outline" slot="icon-only"></ion-icon>
+                      </ion-button>
+                    }
+                    <app-status-pill [trip]="trip.status"></app-status-pill>
+                    <ion-icon
+                      name="chevron-forward-outline" class="chev"
+                      [routerLink]="['/admin/trips', trip.id]">
+                    </ion-icon>
+                  </div>
+                </div>
               }
-            </ion-list>
+            </div>
 
             @if (meta().totalPages > 1) {
               <div class="pagination-bar">
-                <ion-button fill="outline" size="small" [disabled]="page() <= 1" (click)="goToPage(page() - 1)">
-                  <ion-icon name="chevron-back-outline" slot="start"></ion-icon>
+                <button type="button" class="btn btn--ghost btn--sm" [disabled]="page() <= 1" (click)="goToPage(page() - 1)">
+                  <ion-icon name="chevron-back-outline"></ion-icon>
                   Anterior
-                </ion-button>
+                </button>
                 <span class="pagination-label">Página {{ page() }} de {{ meta().totalPages }} · {{ meta().total }} viajes</span>
-                <ion-button fill="outline" size="small" [disabled]="page() >= meta().totalPages" (click)="goToPage(page() + 1)">
+                <button type="button" class="btn btn--ghost btn--sm" [disabled]="page() >= meta().totalPages" (click)="goToPage(page() + 1)">
                   Siguiente
-                  <ion-icon name="chevron-forward-outline" slot="end"></ion-icon>
-                </ion-button>
+                  <ion-icon name="chevron-forward-outline"></ion-icon>
+                </button>
               </div>
             }
           }
         }
-      </div>
-
-      <ion-fab vertical="bottom" horizontal="end" slot="fixed">
-        <ion-fab-button routerLink="/admin/trips/new">
-          <ion-icon name="add-outline"></ion-icon>
-        </ion-fab-button>
-      </ion-fab>
+      </app-admin-page>
     </ion-content>
   `,
   styles: [`
@@ -190,39 +141,41 @@ const STATUS_COLOR: Record<TripStatus, string> = {
     }
     .onboarding-card {
       flex: 1 1 240px;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      text-align: center;
-      gap: 8px;
+      display: block;
       background: var(--app-color-surface);
       border: 1px solid var(--app-color-border);
-      border-radius: var(--app-radius-lg, var(--app-radius-md));
-      box-shadow: var(--app-shadow-sm);
-      padding: 32px 20px;
+      border-radius: 16px;
+      padding: 28px;
       text-decoration: none;
       color: inherit;
       cursor: pointer;
-      transition: box-shadow var(--app-transition-base), transform var(--app-transition-base);
-      ion-icon { font-size: 40px; color: var(--app-color-primary); margin-bottom: 6px; }
-      h2 { margin: 0; font-family: var(--app-font-family-heading); font-size: 1.1rem; color: var(--app-color-text); }
-      p { margin: 0; font-size: 0.85rem; color: var(--app-color-text-muted); }
-      &:hover { box-shadow: var(--app-shadow-md, var(--app-shadow-sm)); transform: translateY(-2px); }
-      &:active { transform: translateY(0); }
+      transition: border-color var(--app-transition-base);
+      h2 { margin: 0 0 4px; font-family: var(--app-font-family-heading); font-size: 1rem; font-weight: 700; color: var(--app-color-text); }
+      p { margin: 0; font-size: 0.82rem; color: var(--app-color-text-muted); line-height: 1.5; }
+      &:hover { border-color: var(--app-color-primary); }
     }
-    .trip-avatar {
-      width: 44px; height: 44px;
+    .onboarding-card__icon {
+      width: 42px; height: 42px;
+      border-radius: 11px;
+      background: rgba(var(--app-color-primary-rgb), .12);
+      color: var(--app-color-primary-shade);
       display: flex; align-items: center; justify-content: center;
-      color: #fff;
+      margin-bottom: 14px;
       ion-icon { font-size: 20px; }
     }
-    .trip-end {
-      display: flex; flex-direction: column; align-items: flex-end; gap: 4px;
+    /* Icono cuadrado de la fila de viaje (mockup: 38px, radio 10, acento suave) */
+    .trip-icon {
+      width: 38px; height: 38px;
+      flex-shrink: 0;
+      border-radius: 10px;
+      background: rgba(var(--app-color-primary-rgb), .12);
+      color: var(--app-color-primary-shade);
+      display: flex; align-items: center; justify-content: center;
+      ion-icon { font-size: 18px; }
     }
-    .trip-actions {
-      display: flex; align-items: center; gap: 2px;
-    }
-    .chev { color: var(--app-color-text-muted); font-size: 16px; padding: 4px; }
+    .trip-link { cursor: pointer; }
+    .chev { color: var(--app-color-text-subtle); font-size: 16px; padding: 4px; cursor: pointer; }
+    .btn--sm { padding: 8px 14px; font-size: 0.8rem; font-weight: 600; }
     .pagination-bar {
       display: flex; align-items: center; justify-content: space-between;
       gap: 10px;
@@ -239,8 +192,6 @@ const STATUS_COLOR: Record<TripStatus, string> = {
 })
 export class DashboardPage implements OnDestroy {
   statusFilter = signal<string>('');
-  STATUS_LABEL = STATUS_LABEL;
-  STATUS_COLOR = STATUS_COLOR;
 
   // Independiente del filtro de la lista de abajo: siempre refleja los
   // conteos globales, para que las tarjetas no cambien según el filtro
@@ -266,8 +217,7 @@ export class DashboardPage implements OnDestroy {
     private alertController: AlertController,
   ) {
     addIcons({
-      addOutline, settingsOutline, peopleOutline, cashOutline, busOutline,
-      checkmarkDoneCircleOutline, timeOutline, chevronForwardOutline, trashOutline,
+      addOutline, busOutline, chevronForwardOutline, trashOutline,
       chevronBackOutline, createOutline, addCircleOutline, personAddOutline,
     });
   }
@@ -305,17 +255,9 @@ export class DashboardPage implements OnDestroy {
     this.stats.set(await this.trips.getStats());
   }
 
-  avatarBg(status: TripStatus) {
-    const map: Record<TripStatus, string> = {
-      PENDING: 'linear-gradient(135deg,#94A3B8,#64748B)',
-      IN_PROGRESS: 'linear-gradient(135deg,#FBBF24,#F59E0B)',
-      FINISHED: 'linear-gradient(135deg,#34D399,#059669)',
-    };
-    return map[status];
-  }
-
-  onFilterChange(ev: CustomEvent) {
-    this.statusFilter.set(ev.detail.value);
+  setFilter(status: string) {
+    if (this.statusFilter() === status) return;
+    this.statusFilter.set(status);
     this.page.set(1);
     this.load();
   }

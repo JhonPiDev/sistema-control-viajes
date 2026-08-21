@@ -2,9 +2,7 @@ import { Component, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import {
-  IonHeader, IonToolbar, IonTitle, IonContent, IonButtons, IonBackButton,
-  IonItem, IonLabel, IonInput, IonButton, IonIcon, IonList, IonSpinner, IonText,
-  IonAvatar,
+  IonContent, IonButton, IonIcon, IonSpinner,
 } from '@ionic/angular/standalone';
 import { addIcons } from 'ionicons';
 import {
@@ -13,58 +11,58 @@ import {
 } from 'ionicons/icons';
 import { DriversService } from '../../../core/services/drivers.service';
 import { CreatedDriver, Driver } from '../../../core/models/models';
+import { AdminPageComponent } from '../../../shared/components/admin-page.component';
+import { EmptyStateComponent } from '../../../shared/components/empty-state.component';
 
 @Component({
   selector: 'app-drivers',
   standalone: true,
   imports: [
-    CommonModule, FormsModule, IonHeader, IonToolbar, IonTitle, IonContent,
-    IonButtons, IonBackButton, IonItem, IonLabel, IonInput, IonButton, IonIcon,
-    IonList, IonSpinner, IonText, IonAvatar,
+    CommonModule, FormsModule, IonContent, IonButton, IonIcon, IonSpinner,
+    AdminPageComponent, EmptyStateComponent,
   ],
   template: `
-    <ion-header>
-      <ion-toolbar>
-        <ion-buttons slot="start"><ion-back-button defaultHref="/admin/dashboard"></ion-back-button></ion-buttons>
-        <ion-title>Conductores</ion-title>
-      </ion-toolbar>
-    </ion-header>
-
-    <ion-content class="ion-padding">
-      <div class="ion-page-desktop">
-        <div class="card-surface">
-          <p class="section-title"><ion-icon name="person-add-outline"></ion-icon> Crear nuevo conductor</p>
-          <p class="hint-text">
-            Las credenciales se generan automáticamente a partir del nombre:
-            correo <code>nombre&#64;gmail.com</code> y contraseña <code>driver + nombre</code>.
+    <ion-content>
+      <app-admin-page
+        title="Conductores"
+        subtitle="Da de alta y consulta quién maneja cada viaje"
+        [maxWidth]="840">
+        <div class="card-surface form-card">
+          <p class="card-title">Crear nuevo conductor</p>
+          <p class="card-hint">
+            Las credenciales se generan a partir del nombre: correo
+            <code>nombre&#64;gmail.com</code> y contraseña <code>driver + nombre</code>.
           </p>
 
           <form (ngSubmit)="submit()">
-            <ion-item fill="outline" class="ion-margin-bottom">
-              <ion-icon name="person-circle-outline" slot="start"></ion-icon>
-              <ion-label position="floating">Nombre completo</ion-label>
-              <ion-input [(ngModel)]="name" name="name" required placeholder="Carlos Ramírez"></ion-input>
-            </ion-item>
+            <label class="field-label" for="driver-name">Nombre completo</label>
+            <input
+              id="driver-name"
+              class="field-control"
+              [(ngModel)]="name"
+              name="name"
+              required
+              placeholder="Ej. Carlos Ramírez" />
 
             @if (error()) {
-              <ion-text color="danger"><p class="error-msg">{{ error() }}</p></ion-text>
+              <p class="field-error">{{ error() }}</p>
             }
 
-            <ion-button expand="block" type="submit" [disabled]="saving() || !name.trim()">
+            <button type="submit" class="btn btn--primary btn--block submit-btn" [disabled]="saving() || !name.trim()">
               @if (saving()) { <ion-spinner name="dots"></ion-spinner> } @else {
-                <ion-icon name="person-add-outline" slot="start"></ion-icon> Crear conductor
+                Crear conductor
               }
-            </ion-button>
+            </button>
           </form>
         </div>
 
         @if (lastCreated()) {
-          <div class="card-surface credentials-card ion-margin-top">
-            <p class="section-title">
-              <ion-icon name="checkmark-circle-outline" color="success"></ion-icon>
+          <div class="card-surface credentials-card">
+            <p class="card-title cred-title">
+              <ion-icon name="checkmark-circle-outline"></ion-icon>
               Conductor creado — copia sus credenciales
             </p>
-            <p class="hint-text warn">
+            <p class="card-hint warn">
               Esta contraseña solo se muestra esta vez. Guárdala o compártela con
               {{ lastCreated()!.name }} ahora mismo.
             </p>
@@ -85,64 +83,56 @@ import { CreatedDriver, Driver } from '../../../core/models/models';
           </div>
         }
 
-        <p class="section-title ion-margin-top">Conductores registrados ({{ drivers().length }})</p>
+        <p class="list-heading">Conductores registrados ({{ drivers().length }})</p>
         @if (loading()) {
-          <div class="empty-state"><ion-spinner></ion-spinner></div>
+          <app-empty-state loading></app-empty-state>
         } @else if (drivers().length === 0) {
-          <p class="empty-state">Aún no hay conductores registrados.</p>
+          <app-empty-state text="Aún no hay conductores registrados."></app-empty-state>
         } @else {
-          <ion-list class="list-cards">
+          <div class="data-list">
             @for (d of drivers(); track d.id) {
-              <ion-item lines="none">
-                <ion-avatar slot="start" class="driver-avatar">
-                  <ion-icon name="person-circle-outline"></ion-icon>
-                </ion-avatar>
-                <ion-label>
-                  <h3>{{ d.name }}</h3>
-                  <p>{{ d.email }}</p>
-                </ion-label>
-              </ion-item>
+              <div class="data-row">
+                <div class="avatar-initials">{{ initials(d.name) }}</div>
+                <div class="data-row__text">
+                  <div class="data-row__title">{{ d.name }}</div>
+                  <div class="data-row__meta">{{ d.email }}</div>
+                </div>
+              </div>
             }
-          </ion-list>
+          </div>
         }
-      </div>
+      </app-admin-page>
     </ion-content>
   `,
   styles: [`
-    .hint-text {
-      font-size: 0.82rem;
-      color: var(--app-color-text-muted);
-      margin: 0 0 var(--app-space-md);
-      code {
-        background: var(--app-color-surface-alt);
-        padding: 1px 5px;
-        border-radius: 4px;
-        font-size: 0.78rem;
-      }
+    .form-card { margin-bottom: var(--app-space-lg); }
+    .submit-btn { margin-top: var(--app-space-md); }
+
+    .list-heading {
+      font-size: 0.875rem;
+      font-weight: 700;
+      color: var(--app-color-text);
+      margin: var(--app-space-lg) 0 10px;
     }
-    .hint-text.warn { color: var(--app-color-warning); }
-    .error-msg { font-size: 0.85rem; margin: 0 0 8px; }
 
     .credentials-card {
-      border: 1px solid rgba(var(--app-color-secondary-rgb), .3);
+      border-color: rgba(var(--app-color-secondary-rgb), .35);
       background: rgba(var(--app-color-secondary-rgb), .05);
+      margin-bottom: var(--app-space-lg);
     }
+    .cred-title {
+      display: flex; align-items: center; gap: 8px;
+      ion-icon { color: var(--app-color-secondary); font-size: 18px; }
+    }
+    .card-hint.warn { color: var(--app-color-warning); }
     .cred-row {
       display: flex; align-items: center; gap: 10px;
       padding: 8px 0;
       border-top: 1px dashed var(--app-color-border);
-      font-size: 0.88rem;
+      font-size: 0.85rem;
       &:first-of-type { border-top: none; }
       ion-icon:first-child { color: var(--app-color-secondary); font-size: 18px; }
       span { flex: 1; font-family: monospace; word-break: break-all; }
-    }
-
-    .driver-avatar {
-      width: 40px; height: 40px;
-      display: flex; align-items: center; justify-content: center;
-      background: rgba(var(--app-color-primary-rgb), .12);
-      color: var(--app-color-primary);
-      ion-icon { font-size: 24px; }
     }
   `],
 })
@@ -192,5 +182,10 @@ export class DriversPage implements OnInit {
 
   copy(text: string) {
     navigator.clipboard?.writeText(text);
+  }
+
+  /** Iniciales para el avatar circular de la lista (máx. 2 letras). */
+  initials(name: string): string {
+    return name.split(' ').map((w) => w[0]).slice(0, 2).join('').toUpperCase();
   }
 }
