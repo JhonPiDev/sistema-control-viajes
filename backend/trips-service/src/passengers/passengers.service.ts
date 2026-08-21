@@ -16,11 +16,9 @@ export class PassengersService {
   }
 
   async add(dto: CreatePassengerDto) {
-    // Un pasajero agregado desde una parada (por el conductor, en ruta) ya
-    // está físicamente abordando en ese momento: se registra directamente
-    // como BOARDED, con la parada asociada. Uno agregado sin parada (por el
-    // admin, al crear el viaje) sigue el flujo normal de check-in en el
-    // origen y queda PENDING hasta que el conductor lo marque.
+    // Con parada (agregado en ruta por el conductor) ya está abordando: se
+    // registra BOARDED directo. Sin parada (por el admin, al crear el
+    // viaje) sigue el check-in normal y queda PENDING.
     let boardingStatus: BoardingStatus | undefined;
     let checkedAt: Date | undefined;
     if (dto.stopId) {

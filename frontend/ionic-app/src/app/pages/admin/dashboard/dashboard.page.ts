@@ -254,16 +254,9 @@ export class DashboardPage implements OnDestroy {
   page = signal(1);
   meta = signal<{ total: number; totalPages: number }>({ total: 0, totalPages: 1 });
 
-  // Refresco en vivo: como Ionic mantiene viva la página en el stack de
-  // navegación (no se destruye al volver de "Crear viaje"), `ngOnInit`
-  // solo se dispara una vez y nunca vuelve a correr — por eso el
-  // dashboard se quedaba con la lista vieja al volver de crear un viaje.
-  // `ionViewWillEnter` sí se dispara cada vez que la página vuelve a
-  // quedar visible, así que ahí recargamos. Además, mientras el admin
-  // está viendo el dashboard, se sondea el backend cada pocos segundos
-  // (en silencio, sin mostrar el spinner) para reflejar cambios hechos
-  // por el conductor (p. ej. que inició o cerró un viaje) sin que el
-  // admin tenga que hacer nada.
+  // Refresco en vivo: ionViewWillEnter (no ngOnInit, que solo corre una
+  // vez) recarga cada vez que se vuelve a esta página, y mientras queda
+  // visible se sondea el backend en silencio cada POLL_MS.
   private pollTimer: ReturnType<typeof setInterval> | null = null;
   private readonly POLL_MS = 8000;
 

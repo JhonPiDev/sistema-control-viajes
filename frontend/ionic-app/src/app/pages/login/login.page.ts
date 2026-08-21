@@ -7,7 +7,7 @@ import {
   IonSpinner, IonText, IonCard, IonCardContent,
 } from '@ionic/angular/standalone';
 import { addIcons } from 'ionicons';
-import { busOutline, lockClosedOutline, mailOutline, shieldCheckmarkOutline, arrowForwardOutline } from 'ionicons/icons';
+import { busOutline, lockClosedOutline, mailOutline, arrowForwardOutline } from 'ionicons/icons';
 import { AuthService } from '../../core/services/auth.service';
 
 @Component({
@@ -61,15 +61,6 @@ import { AuthService } from '../../core/services/auth.service';
                 }
               </ion-button>
             </form>
-
-            <div class="demo-creds">
-              <div class="demo-creds-title">
-                <ion-icon name="shield-checkmark-outline"></ion-icon>
-                <span>Credenciales de prueba</span>
-              </div>
-              <div class="demo-row"><span class="role-tag role-admin">Admin</span><span>admin&#64;viajes.com / Admin123!</span></div>
-              <div class="demo-row"><span class="role-tag role-driver">Conductor</span><span>conductor&#64;viajes.com / Driver123!</span></div>
-            </div>
           </ion-card-content>
         </ion-card>
       </div>
@@ -132,41 +123,6 @@ import { AuthService } from '../../core/services/auth.service';
       margin: 0 0 var(--app-space-lg);
     }
     .error-msg { font-size: .85rem; margin: 0 0 8px; }
-
-    .demo-creds {
-      margin-top: var(--app-space-md);
-      padding: 12px 14px;
-      border-radius: var(--app-radius-md);
-      background: var(--app-color-surface-alt);
-      font-size: .78rem;
-      color: var(--app-color-text-muted);
-    }
-    .demo-creds-title {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      font-weight: 700;
-      color: var(--app-color-text);
-      margin-bottom: 6px;
-      ion-icon { color: var(--app-color-secondary); }
-    }
-    .demo-row {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      padding: 2px 0;
-    }
-    .role-tag {
-      font-size: 0.68rem;
-      font-weight: 700;
-      padding: 2px 8px;
-      border-radius: var(--app-radius-full);
-      flex-shrink: 0;
-      min-width: 58px;
-      text-align: center;
-    }
-    .role-admin { background: rgba(var(--app-color-primary-rgb), 0.14); color: var(--app-color-primary); }
-    .role-driver { background: rgba(var(--app-color-secondary-rgb), 0.14); color: var(--app-color-secondary); }
   `],
 })
 export class LoginPage {
@@ -176,7 +132,7 @@ export class LoginPage {
   error = signal<string | null>(null);
 
   constructor(private auth: AuthService, private router: Router) {
-    addIcons({ busOutline, lockClosedOutline, mailOutline, shieldCheckmarkOutline, arrowForwardOutline });
+    addIcons({ busOutline, lockClosedOutline, mailOutline, arrowForwardOutline });
   }
 
   async onSubmit() {
@@ -186,13 +142,8 @@ export class LoginPage {
       const user = await this.auth.login(this.email, this.password);
       this.router.navigate([user.role === 'ADMIN' ? '/admin' : '/driver']);
     } catch (e: any) {
-      // Antes esto siempre mostraba "Credenciales inválidas" sin importar la
-      // causa real, lo que confunde muchísimo cuando el problema es que el
-      // backend (plan gratuito de Render) está dormido/despertando o caído,
-      // no que el usuario/contraseña estén mal. Se distingue por el status
-      // HTTP: 0 = no hubo respuesta del servidor (dormido, red, CORS);
-      // 5xx = el servidor respondió pero con error; 401/lo demás = sí llegó
-      // a validar credenciales y las rechazó.
+      // Distingue por status HTTP: 0 = sin respuesta (servidor dormido/red/CORS);
+      // 5xx = error del servidor; el resto = credenciales sí evaluadas y rechazadas.
       if (e?.status === 0) {
         this.error.set(
           'No se pudo conectar con el servidor. Si llevaba un rato sin uso (plan gratuito), puede estar despertando: espera unos 30-60 segundos y vuelve a intentar.',

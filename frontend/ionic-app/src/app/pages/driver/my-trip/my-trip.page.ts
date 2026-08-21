@@ -9,7 +9,7 @@ import {
 import { addIcons } from 'ionicons';
 import {
   settingsOutline, peopleOutline, createOutline, playOutline, navigateOutline,
-  flagOutline, checkmarkDoneOutline, busOutline, lockClosedOutline,
+  flagOutline, checkmarkDoneOutline, busOutline, lockClosedOutline, star,
 } from 'ionicons/icons';
 import { TripsService } from '../../../core/services/trips.service';
 import { Trip, TripStatus } from '../../../core/models/models';
@@ -53,17 +53,21 @@ const STATUS_COLOR: Record<TripStatus, string> = {
       @if (loading()) {
         <div class="empty-state"><ion-spinner></ion-spinner></div>
       } @else if (!trip() && chooser().length > 1) {
-        <p class="chooser-hint">Tienes {{ chooser().length }} viajes activos. Elige uno para continuar:</p>
+        <p class="chooser-hint">Tienes {{ chooser().length }} viajes activos, ordenados del más antiguo al más nuevo:</p>
         <ion-list class="list-cards">
-          @for (t of chooser(); track t.id) {
+          @for (t of chooser(); track t.id; let i = $index) {
             <ion-item (click)="onChooseTrip(t)" button detail="true" lines="none">
               <ion-avatar slot="start" class="trip-avatar" [style.background]="avatarBg(t.status)">
-                <ion-icon name="bus-outline"></ion-icon>
+                @if (i === 0) {
+                  <ion-icon name="star"></ion-icon>
+                } @else {
+                  <ion-icon name="bus-outline"></ion-icon>
+                }
               </ion-avatar>
               <ion-label>
                 <h2>{{ t.name }}</h2>
                 <p>{{ t.origin }} → {{ t.destination }}</p>
-                <p>{{ t.passengers.length }} pasajeros</p>
+                <p>{{ t.passengers.length }} pasajeros · Creado {{ elapsedLabel(t.createdAt) }}</p>
               </ion-label>
               <ion-badge slot="end" [color]="STATUS_COLOR[t.status]">{{ STATUS_LABEL[t.status] }}</ion-badge>
             </ion-item>
@@ -284,10 +288,8 @@ export class MyTripPage implements OnDestroy {
   STATUS_LABEL = STATUS_LABEL;
   STATUS_COLOR = STATUS_COLOR;
 
-  // Igual que en el dashboard del admin: sondeo en segundo plano mientras
-  // la página está visible, para que un viaje recién asignado por el
-  // admin (o un cambio de estado) le aparezca al conductor sin que tenga
-  // que jalar para refrescar.
+  // Sondeo en segundo plano (como el dashboard) para que un viaje recién
+  // asignado le aparezca al conductor sin refrescar a mano.
   private pollTimer: ReturnType<typeof setInterval> | null = null;
   private readonly POLL_MS = 8000;
 
@@ -299,7 +301,7 @@ export class MyTripPage implements OnDestroy {
   ) {
     addIcons({
       settingsOutline, peopleOutline, createOutline, playOutline, navigateOutline,
-      flagOutline, checkmarkDoneOutline, busOutline, lockClosedOutline,
+      flagOutline, checkmarkDoneOutline, busOutline, lockClosedOutline, star,
     });
   }
 
@@ -328,7 +330,9 @@ export class MyTripPage implements OnDestroy {
     if (!opts?.silent) this.loading.set(true);
     try {
       const result = await this.tripsService.list(1, 20, undefined, { silent: true });
-      const active = result.data.filter((t) => t.status !== 'FINISHED');
+      const active = result.data
+        .filter((t) => t.status !== 'FINISHED')
+        .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
       this.chooser.set(active);
 
       const id = this.route.snapshot.paramMap.get('id');
@@ -346,13 +350,7 @@ export class MyTripPage implements OnDestroy {
     }
   }
 
-  /**
-   * Se llama al tocar un viaje en el selector (cuando hay varios activos).
-   * Si el que se quiere abrir está PENDIENTE y ya hay otro EN RUTA, ni
-   * siquiera deja entrar: avisa de una vez con una alerta y ofrece ir
-   * directo al que está en curso, en vez de dejar que el conductor entre
-   * y se tope con el botón "Iniciar viaje" bloqueado.
-   */
+  /** Al elegir un viaje PENDIENTE con otro ya EN RUTA, avisa y ofrece ir directo a ese en vez de dejarlo entrar bloqueado. */
   async onChooseTrip(t: Trip) {
     if (t.status === 'PENDING') {
       const blocker = this.chooser().find((o) => o.id !== t.id && o.status === 'IN_PROGRESS');
@@ -382,6 +380,17 @@ export class MyTripPage implements OnDestroy {
     ).length;
   }
 
+  /** "hace 5 min" / "hace 2 h" — para priorizar cuál viaje atender primero. */
+  elapsedLabel(createdAt: string): string {
+    const minutes = Math.max(0, Math.round((Date.now() - new Date(createdAt).getTime()) / 60000));
+    if (minutes < 1) return 'hace instantes';
+    if (minutes < 60) return `hace ${minutes} min`;
+    const hours = Math.floor(minutes / 60);
+    if (hours < 24) return `hace ${hours} h`;
+    const days = Math.floor(hours / 24);
+    return `hace ${days} d`;
+  }
+
   avatarBg(status: Trip['status']) {
     const map: Record<Trip['status'], string> = {
       PENDING: 'linear-gradient(135deg,#94A3B8,#64748B)',
@@ -399,13 +408,7 @@ export class MyTripPage implements OnDestroy {
     return this.trip()?.status === 'IN_PROGRESS';
   }
 
-  /**
-   * Un conductor no puede tener dos viajes EN RUTA a la vez. Si dentro de
-   * sus viajes activos hay otro (distinto al que se está viendo) que ya
-   * está IN_PROGRESS, ese es el que bloquea el botón "Iniciar viaje".
-   * El backend valida esto mismo (trips-service), esto es solo para
-   * mostrarlo claro en la UI antes de que el conductor lo intente.
-   */
+  /** Otro viaje ya IN_PROGRESS del conductor, si lo hay (bloquea "Iniciar viaje"; el backend valida lo mismo). */
   otherTripInProgress(): Trip | null {
     const current = this.trip();
     if (!current || current.status !== 'PENDING') return null;

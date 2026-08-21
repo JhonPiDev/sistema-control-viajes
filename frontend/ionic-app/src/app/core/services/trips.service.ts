@@ -21,13 +21,7 @@ export class TripsService {
     return `${this.config.apiUrl}/trips`;
   }
 
-  /**
-   * `silent`: no toca el signal `loading` (usado para el spinner de
-   * pantalla completa). Se pasa en true desde los refrescos automáticos
-   * en segundo plano (polling) para que no parpadee la lista cada vez
-   * que se refresca sola; se deja en false (default) para la carga
-   * inicial y el pull-to-refresh, donde sí se quiere ver el spinner.
-   */
+  /** `silent: true` no toca el signal `loading` — para polling en segundo plano sin parpadeo. */
   async list(page = 1, limit = 10, status?: string, opts?: { silent?: boolean }): Promise<PagedResult<Trip>> {
     if (!opts?.silent) this.loading.set(true);
     try {

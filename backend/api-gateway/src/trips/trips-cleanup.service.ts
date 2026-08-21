@@ -4,14 +4,10 @@ import { callService } from '../common/rpc.helper';
 import { TRIPS_SERVICE_URL, OPERATIONS_SERVICE_URL } from '../common/service-urls';
 
 /**
- * Borra un viaje "en cascada" a través de los tres servicios:
- *  - operations-service: gastos y novedades del viaje (no tienen FK real
- *    porque viven en otra base de datos, así que hay que borrarlos a mano
- *    ANTES de borrar el viaje, o quedarían huérfanos).
- *  - trips-service: el viaje en sí (pasajeros y paradas se van en cascada
- *    por la relación de Prisma).
- * La usa tanto el borrado manual del admin (TripsController) como la tarea
- * programada de limpieza automática de este mismo archivo.
+ * Borra un viaje en cascada: primero gastos/novedades en
+ * operations-service (sin FK real, quedarían huérfanos), luego el viaje
+ * en trips-service (pasajeros/paradas se van solos por Prisma). La usa
+ * tanto el borrado manual del admin como la limpieza automática de abajo.
  */
 @Injectable()
 export class TripsCleanupService {
@@ -25,12 +21,7 @@ export class TripsCleanupService {
     await callService(TRIPS_SERVICE_URL, 'DELETE', `/trips/${tripId}`);
   }
 
-  /**
-   * Limpieza automática: una vez al día borra los viajes FINALIZADOS hace
-   * más de TRIP_RETENTION_DAYS días (90 por defecto), para no acumular
-   * indefinidamente datos históricos en el plan gratuito de Postgres.
-   * Los viajes PENDIENTES o EN RUTA nunca se tocan, sin importar la fecha.
-   */
+  /** Una vez al día borra los viajes FINALIZADOS hace más de TRIP_RETENTION_DAYS (90 por defecto). */
   @Cron(CronExpression.EVERY_DAY_AT_3AM)
   async cleanupExpiredTrips() {
     const days = Number(process.env.TRIP_RETENTION_DAYS) > 0

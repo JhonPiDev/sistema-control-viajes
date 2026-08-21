@@ -125,12 +125,8 @@ export class TripsService {
   }
 
   /**
-   * Solo se puede editar un viaje mientras está PENDIENTE: una vez que
-   * arranca ya hay firma, posiblemente pasajeros abordados, etc. — cambiar
-   * la ruta o el conductor en ese punto dejaría datos inconsistentes. Las
-   * paradas se reemplazan completas (borra las viejas y crea las nuevas en
-   * el orden recibido); es seguro porque en PENDING nunca hay pasajeros
-   * todavía asociados a una parada (eso solo pasa con el viaje en curso).
+   * Solo editable en PENDIENTE (evita inconsistencias una vez hay firma o
+   * pasajeros abordados). Las paradas se reemplazan completas.
    */
   async update(id: string, dto: UpdateTripDto) {
     const trip = await this.findOne(id);
@@ -161,12 +157,7 @@ export class TripsService {
     });
   }
 
-  /**
-   * Viajes FINALIZADOS hace más de `days` días: candidatos a limpieza
-   * automática (el gateway los usa en su tarea programada). Solo se
-   * consideran FINISHED porque un viaje pendiente o en curso nunca debería
-   * desaparecer solo, sin importar cuánto tiempo lleve creado.
-   */
+  /** Viajes FINALIZADOS hace más de `days` días: candidatos a limpieza automática. */
   async findExpired(days: number) {
     const cutoff = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
     return this.prisma.trip.findMany({
@@ -176,14 +167,10 @@ export class TripsService {
   }
 
   /**
-   * Elimina el viaje. Solo se permite si ya está FINALIZADO: uno pendiente
-   * se edita (o se deja pendiente) en vez de borrarse, y uno en curso debe
-   * cerrarse primero — borrar un viaje activo le tumbaría la app al
-   * conductor a mitad de ruta. Pasajeros y paradas se borran en cascada
-   * (definido en el schema de Prisma). Gastos y novedades viven en
-   * operations-service (otra base de datos), así que quien llama a esto
-   * primero debe pedirle a ese servicio que borre lo suyo — ver
-   * TripsCleanupService en el gateway.
+   * Solo se puede eliminar un viaje FINALIZADO (uno en curso tumbaría la
+   * app al conductor a mitad de ruta). Pasajeros/paradas se borran en
+   * cascada; gastos/novedades viven en operations-service y los borra
+   * antes TripsCleanupService (gateway).
    */
   async remove(id: string) {
     const trip = await this.findOne(id);

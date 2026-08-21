@@ -20,12 +20,9 @@ export class DriversController {
   }
 
   /**
-   * Crea un conductor con credenciales autogeneradas a partir del nombre:
-   *   correo:    <nombre-sin-espacios-ni-tildes>@gmail.com
-   *   contraseña: driver<nombre-sin-espacios-ni-tildes>
-   * La contraseña en texto plano solo se devuelve UNA VEZ en esta
-   * respuesta (luego queda hasheada en la base de datos) para que el
-   * administrador la copie y se la entregue al conductor.
+   * Genera credenciales a partir del nombre (correo: slug@gmail.com,
+   * password: driver<slug>). La contraseña en claro solo se devuelve
+   * aquí, una vez, para que el admin se la entregue al conductor.
    */
   @Post()
   @Roles('ADMIN')

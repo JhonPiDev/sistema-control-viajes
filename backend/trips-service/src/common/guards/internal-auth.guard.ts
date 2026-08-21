@@ -6,16 +6,10 @@ import {
 } from '@nestjs/common';
 
 /**
- * trips-service ya no es un microservicio TCP aislado en la red privada de
- * Docker/Render: ahora es una API HTTP normal con URL pública (necesario
- * para poder desplegarse como Web Service gratis en Render, que no permite
- * tráfico de red privada entrante en el plan gratuito). Sin esta guarda,
- * cualquiera en internet podría llamar directamente a estos endpoints
- * saltándose el login y los guards de rol del api-gateway.
- *
- * Solución simple: una clave compartida (INTERNAL_API_KEY) que solo
- * conocen api-gateway, operations-service y trips-service. Cada llamada
- * interna debe traer el header `x-internal-key` con ese valor.
+ * trips-service tiene URL pública (no red privada aislada), así que sin
+ * esta guarda cualquiera podría llamarlo saltándose el gateway. Exige el
+ * header `x-internal-key` con el valor de INTERNAL_API_KEY, compartido
+ * entre los tres servicios backend.
  */
 @Injectable()
 export class InternalAuthGuard implements CanActivate {

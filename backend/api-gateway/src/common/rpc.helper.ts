@@ -1,18 +1,9 @@
 import { HttpException, HttpStatus } from '@nestjs/common';
 
 /**
- * Llama a un endpoint interno de trips-service u operations-service por
- * HTTP (antes esto era TCP vía @nestjs/microservices; ver el historial de
- * commits para el porqué del cambio: el plan gratis de Render no permite
- * tráfico de red privada entrante en Web Services, así que los
- * microservicios ahora exponen una API HTTP normal protegida con
- * INTERNAL_API_KEY en vez de aislamiento de red).
- *
- * Traduce cualquier error de red o HTTP en una HttpException legible que
- * luego formatea el AllExceptionsFilter. Como trips-service y
- * operations-service ahora son apps Nest HTTP normales, sus errores YA
- * vienen como JSON bien formado ({statusCode, error, message}) sin
- * necesidad de ningún filtro especial del lado del microservicio.
+ * Llama a un endpoint interno de trips-service/operations-service por HTTP
+ * (protegido con INTERNAL_API_KEY, ver internal-auth.guard.ts) y traduce
+ * cualquier error de red o HTTP en una HttpException legible.
  */
 export async function callService<T>(
   baseUrl: string,
@@ -20,11 +11,8 @@ export async function callService<T>(
   path: string,
   body?: unknown,
 ): Promise<T> {
-  // 25s en vez de 8s: en el plan gratuito de Render, un microservicio
-  // dormido puede tardar hasta ~1 minuto en el PRIMER request tras
-  // despertar (el README ya avisa de esto), y 8s se quedaba corto — el
-  // gateway se rendía y devolvía un error aunque el microservicio ya
-  // estuviera despertando en el fondo.
+  // 25s: un microservicio dormido (plan free de Render) puede tardar
+  // hasta ~1 min en el primer request tras despertar.
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), 25000);
 

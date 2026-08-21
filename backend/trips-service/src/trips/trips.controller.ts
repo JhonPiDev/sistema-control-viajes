@@ -14,11 +14,9 @@ export class TripsController {
     return this.tripsService.create(dto);
   }
 
-  // No se usa @Query() con la clase PaginationDto aquí a propósito: el
-  // ValidationPipe global (whitelist + forbidNonWhitelisted) rechazaría la
-  // petición completa por traer "driverId", que esa clase no declara. La
-  // validación "real" de estos parámetros ya la hace el api-gateway antes
-  // de reenviar la llamada; aquí solo se parsean con valores por defecto.
+  // Sin @Query(PaginationDto): esa clase no declara "driverId" y el
+  // ValidationPipe (whitelist) rechazaría la petición. La validación real
+  // ya la hizo el api-gateway; aquí solo se parsea con defaults.
   @Get()
   findAll(
     @Query('page') pageRaw?: string,

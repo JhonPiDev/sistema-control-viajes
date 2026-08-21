@@ -11,13 +11,7 @@ import { TRIPS_SERVICE_URL, OPERATIONS_SERVICE_URL } from '../common/service-url
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Controller('trips/:tripId/report')
 export class ReportsController {
-  /**
-   * Reporte resumen de cierre de viaje. Agrega datos de AMBOS microservicios:
-   *  - trips-service: pasajeros transportados / viaje
-   *  - operations-service: total de gastos y listado de novedades
-   * Esta es la orquestación típica de un API Gateway sobre una arquitectura
-   * de microservicios.
-   */
+  /** Reporte de cierre: agrega pasajeros (trips-service) y gastos/novedades (operations-service). */
   @Get()
   @Roles('ADMIN', 'DRIVER')
   async getReport(@Param('tripId') tripId: string) {

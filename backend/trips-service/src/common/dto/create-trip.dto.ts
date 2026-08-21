@@ -38,11 +38,8 @@ export class CreateTripDto {
   @IsUUID()
   createdById: string;
 
-  // Lista inicial de pasajeros (opcional al crear, también se puede agregar después).
-  // IMPORTANTE: necesita decoradores de class-validator porque el
-  // ValidationPipe de este microservicio usa whitelist + forbidNonWhitelisted;
-  // una propiedad sin decoradores se rechaza con "property passengers should
-  // not exist" en vez de simplemente ignorarla.
+  // Lista inicial de pasajeros (opcional). Necesita decoradores porque el
+  // ValidationPipe (whitelist) rechaza propiedades sin declarar.
   @IsOptional()
   @IsArray()
   @ValidateNested({ each: true })

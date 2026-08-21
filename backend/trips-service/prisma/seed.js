@@ -1,11 +1,6 @@
 /**
- * Seed de datos de prueba (idempotente).
- *
- * Se escribe en JavaScript plano (no TypeScript) a propósito: corre en el
- * contenedor de producción con "node prisma/seed.js" directo, sin pasar por
- * ts-node. Esto evita por completo los conflictos de resolución de módulos
- * de TypeScript (module/moduleResolution) que solo aparecen dentro del
- * contenedor y que no vale la pena depurar para un script tan simple.
+ * Seed de datos de prueba (idempotente). En JS plano porque corre en el
+ * contenedor con "node prisma/seed.js" directo, sin pasar por ts-node.
  */
 const { PrismaClient, Role } = require('@prisma/client');
 const bcrypt = require('bcryptjs');
@@ -50,13 +45,8 @@ async function main() {
   });
 
   // A propósito NO se crea ningún viaje de demostración: este seed corre en
-  // cada arranque del contenedor (docker-entrypoint.sh -> "prisma db seed"),
-  // y en el plan gratuito de Render eso pasa cada vez que el servicio
-  // despierta de dormido. Antes había un viaje "Bogotá - Medellín (Demo)"
-  // que se recreaba solo si se borraba (el findFirst + create de abajo era
-  // idempotente para SEGUIR existiendo, no para quedarse borrado). Se quitó
-  // para que el dashboard quede realmente vacío para quien prueba la app
-  // por primera vez, y para que un viaje borrado no "reaparezca" solo.
+  // cada arranque del contenedor, así que un viaje demo aquí "reaparecería"
+  // solo cada vez que se borrara.
 
   console.log('✅ Seed completado');
   console.log('----------------------------------------');

@@ -10,12 +10,8 @@ import { closeOutline, locationOutline } from 'ionicons/icons';
 import { CITIES } from '../../core/constants/cities';
 
 /**
- * Selector de ciudad/terminal reutilizable (origen, destino y paradas de un
- * viaje comparten el mismo catálogo fijo). Se abre como modal desde
- * ModalController y se cierra con `modal.dismiss(ciudad, 'select')` al
- * elegir una, o `modal.dismiss(null, 'cancel')` si se cierra sin elegir.
- * Incluye un buscador para filtrar el catálogo (el "filtro" que pidió el
- * admin para no tener que desplazarse por toda la lista).
+ * Selector de ciudad reutilizable (origen, destino, paradas). Modal con
+ * buscador; cierra con `modal.dismiss(ciudad, 'select')` o `dismiss(null, 'cancel')`.
  */
 @Component({
   selector: 'app-city-picker',

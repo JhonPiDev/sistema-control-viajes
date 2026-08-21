@@ -107,14 +107,7 @@ export class SignaturePage implements OnInit, OnDestroy {
     this.tripId = this.route.snapshot.paramMap.get('id')!;
   }
 
-  /**
-   * Ionic anima la entrada de cada página. Si inicializamos el canvas en
-   * ngAfterViewInit (como estaba antes), el elemento todavía puede tener
-   * ancho/alto 0 porque el layout final aún no se calculó — eso hacía que
-   * signature_pad se montara sobre un canvas de tamaño 0 y no se pudiera
-   * dibujar nada. ionViewDidEnter se dispara cuando la transición de
-   * entrada YA terminó, así que el canvas tiene su tamaño real.
-   */
+  /** ionViewDidEnter (no ngAfterViewInit) para que el canvas ya tenga su tamaño real tras la animación de entrada. */
   ionViewDidEnter() {
     this.setupCanvas();
     window.addEventListener('resize', this.onWindowResize);

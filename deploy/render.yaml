@@ -1,28 +1,15 @@
-# ============================================================
 # Render Blueprint - Sistema de Control de Viajes (backend + BD)
-# ============================================================
-# Cómo usar:
-#   1. Sube este repo a GitHub.
-#   2. En Render: New > Blueprint > selecciona el repo, y en "Blueprint
-#      Path" indica "deploy/render.yaml" (no está en la raíz del repo).
-#   3. Render creará: 1 base de datos Postgres + 3 servicios backend, los
-#      3 como "Web Service" para poder usar el plan gratuito.
-#   4. IMPORTANTE - comunicación entre microservicios: el plan gratuito
-#      de Render NO permite que un Web Service reciba tráfico por la red
-#      privada (solo puede enviarlo), así que trips-service y
-#      operations-service se llaman entre sí por su URL PÚBLICA. Por eso
-#      quedan protegidos con una clave compartida (INTERNAL_API_KEY, ver
-#      envVarGroups abajo) en vez de aislamiento de red: cualquier
-#      request a sus endpoints que no traiga esa clave se rechaza.
-#   5. Tras el primer deploy, verifica en el dashboard de Render la URL
-#      pública real de trips-service y operations-service (normalmente
-#      https://<nombre-del-servicio>.onrender.com, salvo que ese nombre ya
-#      esté tomado por otra cuenta, en cuyo caso Render le agrega un
-#      sufijo). Si difiere de los valores por defecto de abajo, actualiza
-#      TRIPS_SERVICE_URL (en operations-service y api-gateway) y
-#      OPERATIONS_SERVICE_URL (en api-gateway) con la URL real — eso
-#      dispara un redeploy automático del servicio afectado.
-# ============================================================
+#
+# Uso: sube el repo a GitHub, en Render New > Blueprint, "Blueprint Path"
+# = deploy/render.yaml. Crea 1 Postgres + 3 Web Services (plan free).
+#
+# Nota: el plan free no permite tráfico entrante por red privada, así que
+# trips-service y operations-service se llaman por su URL pública,
+# protegida con INTERNAL_API_KEY (ver envVarGroups). Tras el primer
+# deploy, verifica en el dashboard la URL real de cada servicio y
+# actualiza TRIPS_SERVICE_URL / OPERATIONS_SERVICE_URL si difieren de los
+# valores por defecto de abajo (pueden traer un sufijo si el nombre ya
+# estaba tomado).
 
 envVarGroups:
   - name: internal-shared
@@ -64,11 +51,8 @@ services:
     healthCheckPath: /health
     envVars:
       - fromGroup: internal-shared
-      # NOTA: al usar una base de datos separada real (recomendado en
-      # producción), crea una segunda BD "viajes-postgres-operations" en
-      # Render y apunta este DATABASE_URL a esa. Para simplificar el
-      # despliegue de la prueba técnica, aquí se reutiliza el mismo
-      # servidor Postgres con otra base de datos lógica.
+      # Reutiliza el mismo servidor Postgres con otra BD lógica; en
+      # producción real conviene una BD separada.
       - key: DATABASE_URL
         fromDatabase:
           name: viajes-postgres

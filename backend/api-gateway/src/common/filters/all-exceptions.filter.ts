@@ -33,11 +33,8 @@ export class AllExceptionsFilter implements ExceptionFilter {
       if (typeof res === 'string') {
         message = res;
       } else if (Array.isArray(res)) {
-        // sendRpc reenvía tal cual el `message` de las validaciones del
-        // microservicio, que ValidationPipe entrega como array de strings
-        // (uno por campo inválido). Sin este caso, `(res as any).message`
-        // es undefined (los arrays no tienen esa propiedad) y el error real
-        // se perdía silenciosamente detrás del texto genérico.
+        // ValidationPipe del microservicio entrega un array de strings (uno
+        // por campo inválido); sin este caso se perdía tras el texto genérico.
         message = res;
       } else if (typeof res === 'object' && res !== null) {
         message = (res as any).message ?? message;
