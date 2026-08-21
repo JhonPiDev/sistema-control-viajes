@@ -684,5 +684,11 @@ ion-chip {
 
 @media (max-width: 820px) {
   .admin-shell { flex-direction: column; min-height: 100%; }
-  .admin-shell__main { padding: var(--app-space-lg) var(--app-space-md); }
+  .admin-shell__main {
+    /* El padding inferior deja libre la altura de la barra de navegación
+       fija (~60px) más la barra de gestos del sistema, para que el último
+       elemento de la página no quede debajo de ella. */
+    padding: var(--app-space-md) var(--app-space-md)
+             calc(72px + env(safe-area-inset-bottom, 0px));
+  }
 }

@@ -143,26 +143,58 @@ import { AuthService } from '../../core/services/auth.service';
       }
     }
 
+    /* ============================================================
+       MÓVIL: barra inferior fija, tipo app nativa.
+       Antes se convertía en una tira horizontal arriba que se
+       desbordaba (los últimos items quedaban fuera de alcance) y se
+       perdía al hacer scroll. Abajo siempre está al alcance del pulgar
+       y los 4 accesos caben sin scroll horizontal.
+       ============================================================ */
     @media (max-width: 820px) {
       .admin-sidebar {
-        width: 100%;
+        position: fixed;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        top: auto;
+        z-index: 20;
+        width: auto;
         height: auto;
-        position: static;
         align-self: auto;
         flex-direction: row;
-        align-items: center;
+        gap: 0;
+        overflow: visible;
         border-right: none;
-        border-bottom: 1px solid var(--app-color-border);
-        padding: 8px 10px;
-        overflow-x: auto;
-        overflow-y: hidden;
-        gap: 8px;
+        border-top: 1px solid var(--app-color-border);
+        box-shadow: 0 -2px 12px rgba(18, 20, 43, .06);
+        /* Respeta la barra de gestos de iOS/Android. */
+        padding: 6px 6px calc(6px + env(safe-area-inset-bottom, 0px));
       }
-      .admin-sidebar__brand { padding: 4px 8px; flex-shrink: 0; }
-      .admin-sidebar__nav { flex-direction: row; }
-      .admin-sidebar__link span, .admin-sidebar__link { white-space: nowrap; }
-      .admin-sidebar__user { margin-top: 0; margin-left: auto; border-top: none; padding: 4px; }
-      .admin-sidebar__user-text { display: none; }
+      /* Marca y usuario no caben ni aportan aquí: el título de la
+         página ya dice dónde estás y la cuenta vive en Ajustes. */
+      .admin-sidebar__brand,
+      .admin-sidebar__user { display: none; }
+
+      .admin-sidebar__nav {
+        flex-direction: row;
+        flex: 1;
+        gap: 0;
+      }
+      .admin-sidebar__link {
+        flex: 1;
+        min-width: 0;
+        flex-direction: column;
+        justify-content: center;
+        gap: 3px;
+        padding: 7px 2px;
+        font-size: 0.66rem;
+        line-height: 1.2;
+        text-align: center;
+        /* Área táctil cómoda aunque la etiqueta sea corta. */
+        min-height: 48px;
+        ion-icon { font-size: 20px; }
+        &.is-active { background: transparent; }
+      }
     }
   `],
 })
